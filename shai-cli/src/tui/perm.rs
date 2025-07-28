@@ -148,7 +148,7 @@ impl PermissionWidget<'_> {
         f.render_widget(block, tool);
         f.render_widget(&self.preview, inner);
 
-        let items = ["Allow", "Yolo", "Deny"];
+        let items = ["Allow", "Allow All (don't ask again for this session)", "Deny"];
         let mut lines = vec![Line::from("Do you want to run this tool?")];
         for (i,s) in items.into_iter().enumerate() {
             if i == self.selected_index {
