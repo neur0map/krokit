@@ -10,14 +10,18 @@ impl HelpArea {
         [
             "  ? to print help      tap esc twice to clear input",
             "  / for commands       tap esc while agent is running to cancel",
-            "                       ctrl^c to exit"
+            "                       ctrl^c to exit",
+            "",
+            "  Available Commands:",
+            "  /exit                exit from the tui",
+            "  /tc <method>         set tool call method: [auto | fc | fc2 | so]"
         ].join("\n").to_string()
     }
 }
 
 impl HelpArea {
     pub fn height(&self) -> u16 {
-        2 // content
+        7 // content (3 general help lines + 1 blank + 1 header + 2 command lines)
     }
 
     pub fn draw(&self, f: &mut Frame, area: Rect) {
