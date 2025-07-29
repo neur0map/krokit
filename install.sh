@@ -131,7 +131,7 @@ update_path() {
     fi
     
     # Check if directory is already in PATH
-    if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    if [ "${PATH#*:$INSTALL_DIR:}" = "$PATH" ] && [ "${PATH#$INSTALL_DIR:}" = "$PATH" ] && [ "${PATH%:$INSTALL_DIR}" = "$PATH" ] && [ "$PATH" != "$INSTALL_DIR" ]; then
         if [ -n "$shell_profile" ] && [ -f "$shell_profile" ]; then
             echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$shell_profile"
             log_success "Added $INSTALL_DIR to PATH in $shell_profile"
@@ -197,7 +197,7 @@ main() {
 }
 
 # Parse command line arguments
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
     case $1 in
         --install-dir)
             INSTALL_DIR="$2"
