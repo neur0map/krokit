@@ -1,5 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use reqwest::Url;
 use serde::{Serialize, Deserialize};
 use shai_llm::{LlmClient, ToolCallMethod};
@@ -64,8 +66,18 @@ impl ShaiConfig {
     }
 
     pub fn config_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
-        let home = dirs::home_dir().ok_or("Could not find home directory")?;
-        Ok(home.join(".shai.config"))
+        let config_dir = std::env::var("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .or_else(|_| {
+                dirs::home_dir()
+                    .map(|home| home.join(".config"))
+                    .ok_or("Could not find home directory")
+            })?;
+        
+        let shai_config_dir = config_dir.join("shai");
+        std::fs::create_dir_all(&shai_config_dir)?;
+        
+        Ok(shai_config_dir.join("auth.config"))
     }
 
     pub fn load() -> Result<ShaiConfig, Box<dyn std::error::Error>> {
@@ -91,7 +103,16 @@ impl ShaiConfig {
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_path = Self::config_path()?;
         let content = serde_json::to_string_pretty(self)?;
-        fs::write(config_path, content)?;
+        fs::write(&config_path, content)?;
+        
+        // Set file permissions to 600 (user read/write only) on Unix systems
+        #[cfg(unix)]
+        {
+            let mut perms = fs::metadata(&config_path)?.permissions();
+            perms.set_mode(0o600);
+            fs::set_permissions(&config_path, perms)?;
+        }
+        
         Ok(())
     }
 
