@@ -29,7 +29,7 @@ pub struct ModalModel {
 }
 
 const MAX_VISIBLE_MODELS: usize = 20;
-const SCROLL_MARGIN: usize = 8;
+const SCROLL_MARGIN: usize = 10;
 
 impl ModalModel {
     pub fn new(available_models: Vec<String>, config: ShaiConfig, providers: Vec<ProviderInfo>, provider: ProviderInfo, env_values: HashMap<String, String>) -> Self {
@@ -163,15 +163,17 @@ impl ModalModel {
         NavAction::None
     }
 
-    pub fn height(&self) -> usize {
+    fn inner_height(&self) -> usize {
+        let search_bar_height = if self.search_mode { 2 } else { 0 };
         let visible_models = std::cmp::min(self.filtered_models.len(), MAX_VISIBLE_MODELS);
-        let search_bar_height = if self.search_mode { 3 } else { 0 };
-        let base_height = 3 + visible_models + 2 + search_bar_height;
-        if self.error_message.is_some() {
-            base_height + 2
-        } else {
-            base_height
-        }
+        let error_height = if self.error_message.is_some() { 2 } else { 0 };
+        let help_height = 2;
+        visible_models + search_bar_height + error_height + help_height
+    }
+
+    pub fn height(&self) -> usize {
+        let borders_with_padding = 4;
+        borders_with_padding + self.inner_height()
     }
 
     pub fn draw(&self, frame: &mut Frame, area: Rect) {
@@ -193,41 +195,9 @@ impl ModalModel {
         let inner = block.inner(area);
         frame.render_widget(block, area);
 
-        let mut constraints = vec![];
-        
-        // Search bar
-        if self.search_mode {
-            constraints.push(Constraint::Length(1)); // Search prompt
-            constraints.push(Constraint::Length(1)); // Empty line
-        }
-        
-        // Top scroll indicator
-        if self.filtered_models.len() > MAX_VISIBLE_MODELS && self.scroll_offset > 0 {
-            constraints.push(Constraint::Length(1));
-        }
-        
-        // Model list
-        let visible_models = std::cmp::min(self.filtered_models.len(), MAX_VISIBLE_MODELS);
-        for _ in 0..visible_models {
-            constraints.push(Constraint::Length(1));
-        }
-        
-        // Bottom scroll indicator
-        if self.filtered_models.len() > MAX_VISIBLE_MODELS && self.scroll_offset + MAX_VISIBLE_MODELS < self.filtered_models.len() {
-            constraints.push(Constraint::Length(1));
-        }
-        
-        // Error message
-        if self.error_message.is_some() {
-            constraints.push(Constraint::Length(1)); // Empty line
-            constraints.push(Constraint::Length(1)); // Error message
-        }
-        
-        // Help text
-        constraints.push(Constraint::Length(1)); // Empty line
-        constraints.push(Constraint::Length(1)); // Help text
-        
+        let constraints = vec![Constraint::Length(1); self.inner_height()];
         let layout_areas = Layout::vertical(constraints).split(inner);
+        
         let mut area_index = 0;
         
         // Draw search bar
@@ -239,16 +209,6 @@ impl ModalModel {
             area_index += 2; // Skip search line and empty line
         }
         
-        // Draw top scroll indicator
-        if self.filtered_models.len() > MAX_VISIBLE_MODELS && self.scroll_offset > 0 {
-            let remaining_above = self.scroll_offset;
-            let scroll_info = format!("... {} more above ...", remaining_above);
-            let scroll_paragraph = Paragraph::new(scroll_info)
-                .style(Style::default().fg(Color::Blue));
-            frame.render_widget(scroll_paragraph, layout_areas[area_index]);
-            area_index += 1;
-        }
-        
         // Draw visible models
         let end_index = std::cmp::min(
             self.scroll_offset + MAX_VISIBLE_MODELS,
@@ -256,61 +216,71 @@ impl ModalModel {
         );
         
         for (display_idx, model_idx) in (self.scroll_offset..end_index).enumerate() {
-            if area_index + display_idx < layout_areas.len() {
-                let model = &self.filtered_models[model_idx];
-                let is_selected = model_idx == self.selected_index;
-                let is_duplicate = self.config.is_duplicate_config(&self.provider.name, &self.env_values, model);
-                
-                let prefix = if is_selected { "● " } else { "○ " };
-                let line = format!("{}{}", prefix, model);
-                
-                let style = if is_duplicate {
-                    Style::default().fg(Color::DarkGray).add_modifier(Modifier::DIM)
-                } else if is_selected {
-                    Style::default().fg(Color::Green)
-                } else {
-                    Style::default().fg(Color::DarkGray)
-                };
-                
-                let paragraph = Paragraph::new(line).style(style);
-                frame.render_widget(paragraph, layout_areas[area_index + display_idx]);
+            // Draw top scroll indicator
+            if self.filtered_models.len() > MAX_VISIBLE_MODELS 
+            && display_idx == 0
+            && self.scroll_offset > 0 {
+                let remaining_above = self.scroll_offset;
+                let scroll_info = format!("... {} more above ...", remaining_above);
+                let scroll_paragraph = Paragraph::new(scroll_info)
+                    .style(Style::default().fg(Color::Blue));
+                frame.render_widget(scroll_paragraph, layout_areas[area_index]);
+                area_index += 1;
+                continue;
             }
-        }
-        area_index += visible_models;
-        
-        // Draw bottom scroll indicator  
-        if self.filtered_models.len() > MAX_VISIBLE_MODELS && self.scroll_offset + MAX_VISIBLE_MODELS < self.filtered_models.len() {
-            let remaining_below = self.filtered_models.len() - end_index;
-            let scroll_info = format!("... {} more below ...", remaining_below);
-            let scroll_paragraph = Paragraph::new(scroll_info)
-                .style(Style::default().fg(Color::Blue));
-            frame.render_widget(scroll_paragraph, layout_areas[area_index]);
+                    
+            // Draw bottom scroll indicator  
+            if self.filtered_models.len() > MAX_VISIBLE_MODELS 
+            && model_idx == end_index - 1 
+            && self.scroll_offset + MAX_VISIBLE_MODELS < self.filtered_models.len() {
+                let remaining_below = self.filtered_models.len() - end_index;
+                let scroll_info = format!("... {} more below ...", remaining_below);
+                let scroll_paragraph = Paragraph::new(scroll_info)
+                    .style(Style::default().fg(Color::Blue));
+                frame.render_widget(scroll_paragraph, layout_areas[area_index]);
+                area_index += 1;
+                continue;
+            }
+
+            let model = &self.filtered_models[model_idx];
+            let is_selected = model_idx == self.selected_index;
+            let is_duplicate = self.config.is_duplicate_config(&self.provider.name, &self.env_values, model);
+            
+            let prefix = if is_selected { "● " } else { "○ " };
+            let line = format!("{}{}", prefix, model);
+            
+            let style = if is_duplicate {
+                Style::default().fg(Color::DarkGray).add_modifier(Modifier::DIM)
+            } else if is_selected {
+                Style::default().fg(Color::Green)
+            } else {
+                Style::default().fg(Color::DarkGray)
+            };
+            
+            let paragraph = Paragraph::new(line).style(style);
+            frame.render_widget(paragraph, layout_areas[area_index]);
             area_index += 1;
         }
         
         // Draw error message if present
         if let Some(error) = &self.error_message {
             area_index += 1; // Skip empty line
-            if area_index < layout_areas.len() {
-                let error_paragraph = Paragraph::new(error.clone())
-                    .style(Style::default().fg(Color::Red));
-                frame.render_widget(error_paragraph, layout_areas[area_index]);
-                area_index += 1;
-            }
+            let error_paragraph = Paragraph::new(error.clone())
+                .style(Style::default().fg(Color::Red));
+            frame.render_widget(error_paragraph, layout_areas[area_index]);
+            area_index += 1;
         }
         
         // Draw help text
         area_index += 1; // Skip empty line
-        if area_index < layout_areas.len() {
-            let help_text = if self.search_mode {
-                "Type to search • ↑↓ navigate • Backspace clear • Esc clear search • Enter select"
-            } else {
-                "↑↓ navigate • Type to search • Enter select • Esc back"
-            };
-            let help_paragraph = Paragraph::new(help_text)
-                .style(Style::default().fg(Color::DarkGray));
-            frame.render_widget(help_paragraph, layout_areas[area_index]);
-        }
+        let help_text = if self.search_mode {
+            "Type to search • ↑↓ navigate • Backspace clear • Esc clear search • Enter select"
+        } else {
+            "↑↓ navigate • Type to search • Enter select • Esc back"
+        };
+        let help_paragraph = Paragraph::new(help_text)
+            .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(help_paragraph, layout_areas[area_index]);
     }
 
 }
