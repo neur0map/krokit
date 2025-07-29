@@ -2395,7 +2395,7 @@ dependencies = [
 
 [[package]]
 name = "shai"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ansi-to-tui",
  "async-trait",
