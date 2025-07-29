@@ -218,7 +218,7 @@ impl ShaiPtyManager {
             
             libc::setsid();
             
-            if libc::ioctl(self.slave_fd, libc::TIOCSCTTY as libc::c_ulong, 0) == -1 {
+            if libc::ioctl(self.slave_fd, libc::TIOCSCTTY.try_into().unwrap(), 0) == -1 {
                 libc::exit(1);
             }
             
