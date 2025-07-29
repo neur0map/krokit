@@ -123,11 +123,15 @@ impl App<'_> {
 
         // Format and display event
         if let Some(formatted) = self.formatter.format_event(&event) {
-            let line_count = formatted.lines().count() as u16;
             if let Some(ref mut terminal) = self.terminal {
+                // wrapped the line to compute the number of lines needed
+                let width = std::cmp::max(24, terminal.size().unwrap().width as usize-5);
+                let wrapped = textwrap::wrap(&formatted, width).join("\n");
+                let line_count = wrapped.lines().count() as u16;
+
                 terminal.clear()?; // this is to avoid visual artifact
                 terminal.insert_before(line_count, |buf| {
-                    let x = formatted.into_text().unwrap();
+                    let x = wrapped.into_text().unwrap();
                     x.render(buf.area, buf);
                 })?;
             }
