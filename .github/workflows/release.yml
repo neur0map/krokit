@@ -12,7 +12,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-musl
             binary_name: shai
             asset_name: shai-linux-x86_64
           - os: windows-latest
@@ -41,7 +41,11 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential musl-tools
+
+      - name: Add musl target (Linux)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: rustup target add x86_64-unknown-linux-musl
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -66,10 +70,6 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.target }}-target-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.target }}-target-
-
-      - name: Set static linking flag (Linux)
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        run: echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
 
       - name: Build binary
         run: cargo build --release --target ${{ matrix.target }}

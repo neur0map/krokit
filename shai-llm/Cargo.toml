@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 # New LLM module dependencies
 async-trait = "0.1"
+openssl = { version = "0.10", features = ["vendored"] }
+native-tls = { version = "0.2", features = ["vendored"] }
 reqwest = { version = "0.12", features = ["json", "stream"] }
 futures = "0.3"
 serde = { version = "1.0", features = ["derive"] }
@@ -49,4 +51,3 @@ path = "src/examples/function_calling.rs"
 [[example]]
 name = "function_calling_streaming"
 path = "src/examples/function_calling_streaming.rs"
-
