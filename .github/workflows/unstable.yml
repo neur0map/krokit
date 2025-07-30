@@ -1,14 +1,12 @@
-name: CI Build
+name: Unstable Build
 
 on:
   push:
-    branches: [ dev/*, feature/*, fix/* ]
-  pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
-    name: Build for ${{ matrix.os }}
+    name: Build Unstable for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -16,19 +14,19 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             binary_name: shai
-            asset_name: shai-linux-x86_64
+            asset_name: shai-unstable-linux-x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             binary_name: shai.exe
-            asset_name: shai-windows-x86_64.exe
+            asset_name: shai-unstable-windows-x86_64.exe
           - os: macos-latest
             target: x86_64-apple-darwin
             binary_name: shai
-            asset_name: shai-macos-x86_64
+            asset_name: shai-unstable-macos-x86_64
           - os: macos-latest
             target: aarch64-apple-darwin
             binary_name: shai
-            asset_name: shai-macos-aarch64
+            asset_name: shai-unstable-macos-aarch64
 
     steps:
       - name: Checkout code
@@ -87,9 +85,40 @@ jobs:
         run: |
           cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} ${{ matrix.asset_name }}
 
-      - name: Upload build artifacts
+      - name: Upload unstable artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset_name }}
           path: ${{ matrix.asset_name }}
-          retention-days: 10
+          retention-days: 30
+
+  create-unstable-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Delete existing unstable release
+        continue-on-error: true
+        run: |
+          gh release delete unstable --yes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create unstable release
+        run: |
+          gh release create unstable \
+            --title "Unstable Build (${{ steps.date.outputs.date }})" \
+            --notes "Automated unstable build from commit ${{ github.sha }}" \
+            --prerelease \
+            shai-unstable-linux-x86_64/shai-unstable-linux-x86_64 \
+            shai-unstable-windows-x86_64.exe/shai-unstable-windows-x86_64.exe \
+            shai-unstable-macos-x86_64/shai-unstable-macos-x86_64 \
+            shai-unstable-macos-aarch64/shai-unstable-macos-aarch64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
