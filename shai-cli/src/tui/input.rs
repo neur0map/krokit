@@ -15,7 +15,7 @@ use shai_core::agent::{AgentController, AgentEvent, PublicAgentState};
 use shai_llm::{tool::call_fc_auto::ToolCallFunctionCallingAuto, ToolCallMethod};
 use tui_textarea::{Input, TextArea};
 
-use crate::tui::{cmdnav::CommandNav, helper::HelpArea};
+use crate::{tui::{cmdnav::CommandNav, helper::HelpArea}};
 
 use super::theme::SHAI_YELLOW;
 
@@ -33,9 +33,12 @@ pub enum UserAction {
 pub struct InputArea<'a> {
     agent_running: bool, 
 
-    // input text 
+    // input text
     input: TextArea<'a>,
     placeholder: String,
+
+    // draft saving for history navigation
+    current_draft: Option<String>,
 
     // alert top left
     animation_start: Option<Instant>,
@@ -54,7 +57,10 @@ pub struct InputArea<'a> {
 
     // bottom helper
     help: Option<HelpArea>,
-    cmdnav: CommandNav
+    cmdnav: CommandNav,
+
+    history: Vec<String>,
+    history_index: usize,
 }
 
 impl Default for InputArea<'_> {
@@ -63,6 +69,7 @@ impl Default for InputArea<'_> {
             agent_running: false,
             input: TextArea::default(),
             placeholder: "? for shortcuts".to_string(),
+            current_draft: None,
             animation_start: None,
             status_message: None,
             last_keystroke_time: None,
@@ -73,7 +80,9 @@ impl Default for InputArea<'_> {
             escape_press_time: None,
             method: ToolCallMethod::FunctionCall,
             help: None,
-            cmdnav: CommandNav{}
+            cmdnav: CommandNav{},
+            history: Vec::new(),
+            history_index: 0,
         }
     }
 }
@@ -81,6 +90,11 @@ impl Default for InputArea<'_> {
 impl InputArea<'_> {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn set_history(&mut self, history: Vec<String>) {
+        self.history = history;
+        self.history_index = self.history.len();
     }
 }
 
@@ -175,6 +189,8 @@ impl InputArea<'_> {
                 let lines = self.input.lines();
                 if !lines[0].is_empty() {
                     let input = lines.join("\n");
+                    self.history.push(input.clone());
+                    self.history_index = self.history.len();
                     
                     // Handle app commands vs agent input
                     self.input = TextArea::default();
@@ -212,6 +228,24 @@ impl InputArea<'_> {
 
 /// event related
 impl InputArea<'_> {
+    fn move_cursor_to_end_of_text(&mut self) {
+        for _ in 0..self.input.lines().len().saturating_sub(1) {
+            self.input.move_cursor(tui_textarea::CursorMove::Down);
+        }
+        if let Some(last_line) = self.input.lines().last() {
+            for _ in 0..last_line.len() {
+                self.input.move_cursor(tui_textarea::CursorMove::Forward);
+            }
+        }
+    }
+
+    fn load_historic_prompt(&mut self, index: usize) {
+        if let Some(entry) = self.history.get(index) {
+            self.input = TextArea::new(entry.lines().map(|s| s.to_string()).collect());
+            self.move_cursor_to_end_of_text();
+        }
+    }
+
     pub async fn handle_event(&mut self, key_event: KeyEvent) -> UserAction{
         let now = Instant::now();
         self.last_keystroke_time = Some(now);
@@ -290,6 +324,53 @@ impl InputArea<'_> {
                 // Regular Enter - set pending and wait
                 self.pending_enter = Some(now);
                 return UserAction::Nope;
+            }
+            KeyCode::Up => {
+                // Get current cursor position
+                let (cursor_row, _) = self.input.cursor();
+                let is_empty = self.input.lines().iter().all(|line| line.is_empty());
+                
+                // Navigate history only if:
+                // 1. Input is empty, OR
+                // 2. Cursor is at the first line
+                if !self.history.is_empty() && self.history_index > 0 && (is_empty || cursor_row == 0) {
+                    if self.history_index == self.history.len() && !is_empty {
+                        let current_text = self.input.lines().join("\n");
+                        self.current_draft = Some(current_text);
+                    }
+                    
+                    self.history_index -= 1;
+                    self.load_historic_prompt(self.history_index);
+                } else if !is_empty && cursor_row > 0 {
+                    self.input.move_cursor(tui_textarea::CursorMove::Up);
+                }
+            }
+            KeyCode::Down => {
+                // Get current cursor position
+                let (cursor_row, _) = self.input.cursor();
+                let is_empty = self.input.lines().iter().all(|line| line.is_empty());
+                let line_count = self.input.lines().len();
+                
+                // Navigate history only if:
+                // 1. Cursor is at the last line
+                if !self.history.is_empty() && (is_empty || cursor_row == line_count - 1) {
+                    if self.history_index < self.history.len() {
+                        self.history_index += 1;
+                        if self.history_index < self.history.len() {
+                            self.load_historic_prompt(self.history_index);
+                        } else {
+                            // Restore draft or create empty input
+                            if let Some(draft) = self.current_draft.take() {
+                                self.input = TextArea::new(draft.lines().map(|s| s.to_string()).collect());
+                                self.move_cursor_to_end_of_text();
+                            } else {
+                                self.input = TextArea::default();
+                            }
+                        }
+                    }
+                } else if !is_empty && cursor_row < line_count - 1 {
+                    self.input.move_cursor(tui_textarea::CursorMove::Down);
+                }
             }
             _ => {
                 // Convert to ratatui event format for tui-textarea
