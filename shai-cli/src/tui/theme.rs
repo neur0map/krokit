@@ -1,14 +1,16 @@
 use rand::Rng;
 
-pub static SHAI_LOGO: &str = r#"
+pub fn shai_logo() -> String {
+    format!(r#"
   ███╗      ███████╗██╗  ██╗ █████╗ ██╗
   ╚═███╗    ██╔════╝██║  ██║██╔══██╗██║
      ╚═███  ███████╗███████║███████║██║
     ███╔═╝  ╚════██║██╔══██║██╔══██║██║
   ███╔═╝    ███████║██║  ██║██║  ██║██║
   ╚══╝      ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
-                         version: 0.1.1
-"#;
+                         version: {}
+"#, env!("CARGO_PKG_VERSION"))
+}
 
 pub static SHAI_YELLOW: (u8, u8, u8) = (249,188,81);
 pub static SHAI_GREEN: (u8, u8, u8)  = (18,200,124);
@@ -57,11 +59,11 @@ pub fn apply_gradient(text: &str, from_color: (u8, u8, u8), to_color: (u8, u8, u
 
 
 pub fn logo() -> String {
-    SHAI_LOGO.replace("\n","\r\n")
+    shai_logo().replace("\n","\r\n")
 }
 
 pub fn logo_cyan() -> String {
-    let logo = SHAI_LOGO.replace("\n","\r\n");
+    let logo = shai_logo().replace("\n","\r\n");
     apply_gradient(&logo, (255, 0, 255), (0, 255, 255))
 }
 

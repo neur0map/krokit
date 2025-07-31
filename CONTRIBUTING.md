@@ -9,6 +9,22 @@ pay attention to a few things:
 4. your work must be signed (see below)
 5. you may contribute through GitHub Pull Requests
  
+# Release Process
+
+When creating a new release, make sure to update the version in the following locations:
+
+1. **Main CLI version**: Update `version` in `shai-cli/Cargo.toml`
+2. **Core crate version**: Update `version` in `shai-core/Cargo.toml` 
+3. **LLM crate version**: Update `version` in `shai-llm/Cargo.toml`
+4. **Macros crate version**: Update `version` in `shai-macros/Cargo.toml`
+
+The version banner in the CLI logo is automatically generated from the main CLI crate version using `env!("CARGO_PKG_VERSION")`, so no manual update is needed for the display version.
+
+After updating versions:
+1. Run `cargo check` to ensure everything compiles
+2. Create a git tag with the new version number
+3. Push the tag to trigger the release workflow
+
 # Submitting Modifications
  
 The contributions should be submitted through Github Pull Requests
