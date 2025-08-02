@@ -77,7 +77,7 @@ impl ModalEnvs {
         // Set environment variables based on provider's required env vars
         for (i, env_var) in self.provider.env_vars.iter().enumerate() {
             if i < self.input_fields.len() {
-                let value = self.input_fields[i].lines().join("\n");
+                let value = self.input_fields[i].lines().join("\n").trim().to_string();
                 if !value.is_empty() {
                     self.env_values.insert(env_var.name.clone(), value);
                 }
