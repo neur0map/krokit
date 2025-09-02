@@ -4,6 +4,7 @@ pub mod todo;
 pub mod fs;
 pub mod fetch;
 pub mod bash;
+pub mod mcp;
 
 #[cfg(test)]
 mod tests_llm;
@@ -16,3 +17,4 @@ pub use bash::BashTool;
 pub use fetch::FetchTool;
 pub use fs::{EditTool, FindTool, LsTool, MultiEditTool, ReadTool, WriteTool, FsOperationLog, FsOperationType, FsOperation, FsOperationSummary};
 pub use todo::{TodoReadTool, TodoWriteTool, TodoStorage, TodoItem, TodoStatus, TodoWriteParams, TodoItemInput};
+pub use mcp::{McpClient, McpToolDescription, StdioClient, HttpClient, SseClient};
