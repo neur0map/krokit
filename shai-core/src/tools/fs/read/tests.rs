@@ -12,7 +12,7 @@ fn test_read_tool_creation() {
     let tool = ReadTool::new(log);
     
     // Verify tool properties
-    assert_eq!(tool.name(), "read");
+    assert_eq!(&tool.name(), "read");
     assert!(!tool.description().is_empty());
     
     // Verify capabilities

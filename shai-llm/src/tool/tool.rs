@@ -18,9 +18,9 @@ pub enum ToolCallMethod {
 /// A tool must be able to describe its parameter as a json schema
 pub trait ToolDescription: Send + Sync {
 
-    fn name(&self) -> &'static str;
+    fn name(&self) -> String;
 
-    fn description(&self) -> &'static str;
+    fn description(&self) -> String;
 
     fn parameters_schema(&self) -> serde_json::Value;
     

@@ -20,7 +20,7 @@ fn test_write_tool_permissions() {
 async fn test_write_tool_creation() {
     let log = Arc::new(FsOperationLog::new());
     let tool = WriteTool::new(log);
-    assert_eq!(tool.name(), "write");
+    assert_eq!(&tool.name(), "write");
     assert!(!tool.description().is_empty());
 }
 

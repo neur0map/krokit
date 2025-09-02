@@ -11,12 +11,12 @@ pub struct McpToolDescription {
 }
 
 impl ToolDescription for McpToolDescription {
-    fn name(&self) -> &'static str {
-        Box::leak(self.name.clone().into_boxed_str())
+    fn name(&self) -> String {
+        self.name.clone()
     }
 
-    fn description(&self) -> &'static str {
-        Box::leak(self.description.clone().into_boxed_str())
+    fn description(&self) -> String {
+        self.description.clone()
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

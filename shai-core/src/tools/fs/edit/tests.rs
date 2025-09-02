@@ -20,7 +20,7 @@ fn test_edit_tool_permissions() {
 async fn test_edit_tool_creation() {
     let log = Arc::new(FsOperationLog::new());
     let tool = EditTool::new(log);
-    assert_eq!(tool.name(), "edit");
+    assert_eq!(&tool.name(), "edit");
     assert!(!tool.description().is_empty());
 }
 

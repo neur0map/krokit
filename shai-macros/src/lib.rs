@@ -156,12 +156,12 @@ fn tool_impl(args: String, input: ItemImpl) -> syn::Result<TokenStream2> {
         
         // Implement ToolDescription trait from shai-llm
         impl shai_llm::ToolDescription for #self_ty {
-            fn name(&self) -> &'static str {
-                #name
+            fn name(&self) -> String {
+                #name.to_string()
             }
 
-            fn description(&self) -> &'static str {
-                #description
+            fn description(&self) -> String {
+                #description.to_string()
             }
 
             fn parameters_schema(&self) -> serde_json::Value {

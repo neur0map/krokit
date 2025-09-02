@@ -18,7 +18,7 @@ fn test_bash_tool_permissions() {
 #[tokio::test]
 async fn test_bash_tool_creation() {
     let tool = BashTool::new();
-    assert_eq!(tool.name(), "bash");
+    assert_eq!(&tool.name(), "bash");
     assert!(!tool.description().is_empty());
 }
 
