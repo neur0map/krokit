@@ -17,4 +17,4 @@ pub use bash::BashTool;
 pub use fetch::FetchTool;
 pub use fs::{EditTool, FindTool, LsTool, MultiEditTool, ReadTool, WriteTool, FsOperationLog, FsOperationType, FsOperation, FsOperationSummary};
 pub use todo::{TodoReadTool, TodoWriteTool, TodoStorage, TodoItem, TodoStatus, TodoWriteParams, TodoItemInput};
-pub use mcp::{McpClient, McpToolDescription, StdioClient, HttpClient, SseClient};
+pub use mcp::{McpClient, McpToolDescription, McpConfig, create_mcp_client, StdioClient, HttpClient, SseClient};

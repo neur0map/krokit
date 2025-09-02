@@ -91,7 +91,7 @@ mod llm_integration_tests {
                     for call in calls {
                         debug!(target: "misc", "Tool call: {} -> {}", call.function.name, &tool.name());
                     }
-                    let tool_was_called = calls.iter().any(|call| call.function.name == &tool.name());
+                    let tool_was_called = calls.iter().any(|call| call.function.name == tool.name());
                     if tool_was_called {
                         println!("✅ Tool '{}' PASSED with provider '{}'", &tool.name(), llm_client.provider_name());
                     } else {

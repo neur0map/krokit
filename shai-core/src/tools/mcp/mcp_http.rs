@@ -37,6 +37,10 @@ impl McpClient for HttpClient {
             },
         };
         let service = client_info.serve(transport).await?;
+        
+        // Give the server a moment to process the initialization
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        
         self.service = Some(service);
         Ok(())
     }
@@ -50,7 +54,7 @@ impl McpClient for HttpClient {
 
     async fn list_tools(&self) -> Result<Vec<McpToolDescription>, Box<dyn std::error::Error + Send + Sync>> {
         let service = self.service.as_ref().ok_or("Not connected")?;
-        let tools_result = service.list_tools(Default::default()).await?;
+        let tools_result = service.list_tools(None).await?;
         
         let tool_descriptions = tools_result
             .tools
