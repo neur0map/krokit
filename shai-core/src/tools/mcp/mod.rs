@@ -3,6 +3,7 @@ pub mod mcp_stdio;
 pub mod mcp_http;
 pub mod mcp_sse;
 pub mod mcp_config;
+pub mod mcp_oauth;
 
 #[cfg(test)]
 mod tests;

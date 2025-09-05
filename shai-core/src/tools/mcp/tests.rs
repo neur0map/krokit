@@ -2,7 +2,6 @@
 mod tests {
     use crate::tools::{StdioClient, HttpClient, SseClient, McpClient, McpConfig, create_mcp_client};
     use crate::tools::ToolCall;
-    use shai_llm::ToolDescription;
     use serde_json::json;
     use std::process::Command;
     use tokio;
@@ -53,7 +52,7 @@ mod tests {
             Ok(tools) => {
                 println!("✅ Successfully listed {} tools", tools.len());
                 for tool in &tools {
-                    println!("  - {}: {}", tool.name(), tool.description());
+                    println!("  - {}: {}", tool.name, tool.description);
                 }
                 tools
             }
@@ -66,16 +65,16 @@ mod tests {
 
         // Find a fetch tool to test
         let fetch_tool = tools.iter().find(|tool| {
-            tool.name().to_lowercase().contains("fetch")
+            tool.name.to_lowercase().contains("fetch")
         });
 
         if let Some(tool) = fetch_tool {
-            println!("✅ Found tool to test: {}", tool.name());
+            println!("✅ Found tool to test: {}", tool.name);
             
             // Test executing the tool with a simple HTTP request
             let tool_call = ToolCall {
                 tool_call_id: "test-1".to_string(),
-                tool_name: tool.name(),
+                tool_name: tool.name.clone(),
                 parameters: json!({
                     "url": "https://ovhcloud.com"
                 }),
@@ -172,7 +171,7 @@ mod tests {
         }
 
         // Create HTTP client for MCP server on localhost:8000/mcp
-        let mut client = HttpClient::new("http://localhost:8000/mcp".to_string());
+        let mut client = HttpClient::new("https://mcp.eu.ovhcloud.com/mcp".to_string());
 
         // Test connection
         match client.connect().await {
@@ -188,7 +187,7 @@ mod tests {
             Ok(tools) => {
                 println!("✅ Successfully listed {} tools", tools.len());
                 for tool in &tools {
-                    println!("  - {}: {}", tool.name(), tool.description());
+                    println!("  - {}: {}", tool.name, tool.description);
                 }
                 tools
             }
@@ -201,16 +200,16 @@ mod tests {
 
         // Find a fetch tool to test
         let fetch_tool = tools.iter().find(|tool| {
-            tool.name().to_lowercase().contains("fetch")
+            tool.name.to_lowercase().contains("fetch")
         });
 
         if let Some(tool) = fetch_tool {
-            println!("✅ Found tool to test: {}", tool.name());
+            println!("✅ Found tool to test: {}", tool.name);
             
             // Test executing the tool with a simple HTTP request
             let tool_call = ToolCall {
                 tool_call_id: "test-http-1".to_string(),
-                tool_name: tool.name(),
+                tool_name: tool.name.clone(),
                 parameters: json!({
                     "url": "https://ovhcloud.com"
                 }),
@@ -262,7 +261,7 @@ mod tests {
             Ok(tools) => {
                 println!("✅ Successfully listed {} tools", tools.len());
                 for tool in &tools {
-                    println!("  - {}: {}", tool.name(), tool.description());
+                    println!("  - {}: {}", tool.name, tool.description);
                 }
                 tools
             }
@@ -275,16 +274,16 @@ mod tests {
 
         // Find a fetch tool to test
         let fetch_tool = tools.iter().find(|tool| {
-            tool.name().to_lowercase().contains("fetch")
+            tool.name.to_lowercase().contains("fetch")
         });
 
         if let Some(tool) = fetch_tool {
-            println!("✅ Found tool to test: {}", tool.name());
+            println!("✅ Found tool to test: {}", tool.name);
             
             // Test executing the tool with a simple HTTP request
             let tool_call = ToolCall {
                 tool_call_id: "test-sse-1".to_string(),
-                tool_name: tool.name(),
+                tool_name: tool.name.clone(),
                 parameters: json!({
                     "url": "https://ovhcloud.com"
                 }),
