@@ -95,7 +95,8 @@ OVHCloud provides compatible LLM endpoints for using shai with tools. Start by c
 
 - [Qwen3-32B](https://endpoints.ai.cloud.ovh.net/models/qwen-3-32b)
 - [Mistral-​Small-​3.2-​24B-​Instruct-​2506](https://endpoints.ai.cloud.ovh.net/models/mistral-small-3-2-24b-instruct-2506)
-- [Llama-​3.1-​8B-​Instruct](https://endpoints.ai.cloud.ovh.net/models/llama-3-1-8b-instruct)
+- [Mistral-​Nemo-​Instruct-​2407](https://endpoints.ai.cloud.ovh.net/models/mistral-nemo-instruct-2407)
 - [Mistral-​7B-​Instruct-​v0.3](https://endpoints.ai.cloud.ovh.net/models/mistral-7b-instruct-v0-3)
 - [Meta-​Llama-​3_3-​70B-​Instruct](https://endpoints.ai.cloud.ovh.net/models/llama-3-3-70b-instruct)
+- [Llama-​3.1-​8B-​Instruct](https://endpoints.ai.cloud.ovh.net/models/llama-3-1-8b-instruct)
 - [DeepSeek-​R1-​Distill-​Llama-​70B](https://endpoints.ai.cloud.ovh.net/models/deepseek-r1-distill-llama-70b)
