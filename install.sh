@@ -28,7 +28,7 @@ log_warn() {
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo "${RED}[ERROR]${NC} $1"
 }
 
 # Detect OS and architecture
@@ -131,7 +131,7 @@ update_path() {
     fi
     
     # Check if directory is already in PATH
-    if [ "${PATH#*:$INSTALL_DIR:}" = "$PATH" ] && [ "${PATH#$INSTALL_DIR:}" = "$PATH" ] && [ "${PATH%:$INSTALL_DIR}" = "$PATH" ] && [ "$PATH" != "$INSTALL_DIR" ]; then
+    if [ "${PATH#*:"$INSTALL_DIR":}" = "$PATH" ] && [ "${PATH#"$INSTALL_DIR":}" = "$PATH" ] && [ "${PATH%:"$INSTALL_DIR"}" = "$PATH" ] && [ "$PATH" != "$INSTALL_DIR" ]; then
         if [ -n "$shell_profile" ] && [ -f "$shell_profile" ]; then
             echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$shell_profile"
             log_success "Added $INSTALL_DIR to PATH in $shell_profile"
@@ -162,7 +162,7 @@ main() {
     
     # Extract download URL
     local download_url
-    download_url=$(echo "$release_json" | grep -o "\"browser_download_url\":[[:space:]]*\"[^\"]*$platform[^\"]*\"" | cut -d'"' -f4)
+    download_url=$(echo "$release_json" | grep -o "\"browser_download_url\":[[:space:]]*\"[^\"]*${platform}[^\"]*\"" | cut -d'"' -f4)
     
     if [ -z "$download_url" ]; then
         log_error "Could not find download URL for platform: $platform"
