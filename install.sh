@@ -3,6 +3,7 @@
 set -e
 
 # Configuration
+PROGNAME="shai"
 REPO="ovh/shai"
 BINARY_NAME="shai"
 INSTALL_DIR="$HOME/.local/bin"
@@ -59,18 +60,36 @@ detect_platform() {
     # Special handling for macOS (only x86_64 and aarch64 available)
     if [ "$os" = "macos" ]; then
         if [ "$arch" = "x86_64" ]; then
-            platform="${BINARY_NAME}-macos-x86_64"
+            platform="macos-x86_64"
         elif [ "$arch" = "aarch64" ]; then
-            platform="${BINARY_NAME}-macos-aarch64"
+            platform="macos-aarch64"
         fi
     elif [ "$os" = "linux" ]; then
-        platform="${BINARY_NAME}-linux-x86_64"
+        platform="linux-x86_64"
     elif [ "$os" = "windows" ]; then
-        platform="${BINARY_NAME}-windows-x86_64.exe"
+        platform="windows-x86_64.exe"
         BINARY_NAME="${BINARY_NAME}.exe"
     fi
 
     echo "$platform"
+}
+
+# Generate the full download binary file name
+# Arguments:    $1 - Platform <string>
+#               $2 - Release Tag <string>
+get_download_binary_name() {
+    platform="${1}"
+    release_tag="${2}"
+    bin_name=""
+
+    # Releases tagged with an actual version number (e.g. v0.1.3) do not embed the tag in the download binary name
+    if [ -n "${release_tag}" ] && ! echo "${release_tag}" | grep -Eoq '^v?[0-9]*\.?([0-9])*\.?([0-9])*$'; then
+        bin_name="${PROGNAME}-${release_tag}-${platform}"
+    else
+        bin_name="${PROGNAME}-${platform}"
+    fi
+
+    echo "${bin_name}"
 }
 
 # Get latest release info from GitHub API
@@ -84,6 +103,24 @@ get_latest_release() {
         curl -s "$api_url"
     elif command -v wget >/dev/null 2>&1; then
         wget -qO- "$api_url"
+    else
+        log_error "Neither curl nor wget is available. Please install one of them."
+        exit 1
+    fi
+}
+
+# Get release info for a specific tag from GitHub API
+get_release_for_tag() {
+    release_tag=${1}
+    local api_tags_url="https://api.github.com/repos/${REPO}/releases/tags/${release_tag}"
+
+    log_info "Fetching release information for tag ${release_tag}..."
+
+    # Try with curl first, then wget
+    if command -v curl >/dev/null 2>&1; then
+        curl -s "$api_tags_url"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -qO- "$api_tags_url"
     else
         log_error "Neither curl nor wget is available. Please install one of them."
         exit 1
@@ -151,18 +188,24 @@ main() {
     platform=$(detect_platform)
     log_info "Detected platform: $platform"
     
-    # Get latest release
+    # Get a release
     local release_json
-    release_json=$(get_latest_release)
+    if [ -n "${SHAI_RELEASE}" ] && [ "${SHAI_RELEASE}" != "latest" ]; then
+        release_json=$(get_release_for_tag "${SHAI_RELEASE}")
+        download_bin_name=$(get_download_binary_name "${platform}" "${SHAI_RELEASE}")
+    else
+        release_json=$(get_latest_release)
+        download_bin_name=$(get_download_binary_name "${platform}")
+    fi
     
     if [ -z "$release_json" ]; then
         log_error "Failed to fetch release information"
         exit 1
     fi
-    
+
     # Extract download URL
     local download_url
-    download_url=$(echo "$release_json" | grep -o "\"browser_download_url\":[[:space:]]*\"[^\"]*${platform}[^\"]*\"" | cut -d'"' -f4)
+    download_url=$(echo "$release_json" | grep -o "\"browser_download_url\":[[:space:]]*\"[^\"]*${download_bin_name}[^\"]*\"" | cut -d'"' -f4)
     
     if [ -z "$download_url" ]; then
         log_error "Could not find download URL for platform: $platform"
@@ -207,7 +250,7 @@ while [ $# -gt 0 ]; do
             echo "Usage: $0 [--install-dir DIR] [--help]"
             echo ""
             echo "Options:"
-            echo "  --install-dir DIR    Install to DIR (default: $HOME/.local/bin)"
+            echo "  --install-dir DIR   Install to DIR (default: $HOME/.local/bin)"
             echo "  --help              Show this help message"
             exit 0
             ;;
