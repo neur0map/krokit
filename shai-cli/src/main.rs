@@ -6,6 +6,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
     ExecutableCommand,
 };
+
 use ringbuffer::RingBuffer;
 use console::strip_ansi_codes;
 use shai_core::agent::LoggingConfig;
@@ -66,6 +67,9 @@ struct Cli {
     /// Remove specific tools from the default set (comma-separated)
     #[arg(long)]
     remove: Option<String>,
+    /// Show version information
+    #[arg(short, long)]
+    version: bool,
     /// Auto-fix mode: if no subcommand provided, these args go to fix
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     args: Vec<String>,
@@ -187,6 +191,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
 
+            // Handle --version flag
+            if cli.version {
+                show_version()?;
+                return Ok(());
+            }
 
             if !messages.is_empty() || cli.list_tools {
                 // Route to fix command with combined messages and global options
@@ -256,6 +265,11 @@ async fn handle_fix(
         .collect();
     
     AppHeadless::new().run(initial_trace, tools, remove, trace, agent_name).await
+}
+
+fn show_version() -> Result<(), Box<dyn std::error::Error>> {
+    println!("{} version {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    return Ok(());
 }
 
 #[cfg(unix)]
