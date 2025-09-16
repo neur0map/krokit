@@ -76,6 +76,12 @@ impl LsTool {
     fn list_directory(&self, params: &LsToolParams, current_depth: u32, files_collected: &mut u32) -> Result<Vec<FileInfo>, Box<dyn std::error::Error>> {
         let path = Path::new(&params.directory);
         
+        // Early return if we've hit the limit
+        let max_files = params.max_files.unwrap_or(200);
+        if *files_collected >= max_files {
+            return Ok(Vec::new());
+        }
+        
         if !path.exists() {
             return Err(format!("Directory '{}' does not exist", params.directory).into());
         }
@@ -101,10 +107,8 @@ impl LsTool {
 
         for entry in dir_entries {
             // Check if we've reached the max files limit
-            if let Some(max_files) = params.max_files {
-                if *files_collected >= max_files {
-                    break;
-                }
+            if *files_collected >= max_files {
+                break;
             }
 
             let entry_path = entry.path();
@@ -122,20 +126,14 @@ impl LsTool {
 
                     // Recurse into subdirectories if requested
                     if params.recursive && file_info.is_dir {
-                        // Check max files limit before recursing
-                        if let Some(max_files) = params.max_files {
-                            if *files_collected >= max_files {
-                                break;
-                            }
-                        }
-
+                        // The global counter will be checked at the start of the recursive call
                         let subdir_params = LsToolParams {
                             directory: entry_path.to_string_lossy().to_string(),
                             recursive: true,
                             show_hidden: params.show_hidden,
                             long_format: params.long_format,
                             max_depth: params.max_depth,
-                            max_files: params.max_files,
+                            max_files: params.max_files, // Keep original params
                         };
                         
                         match self.list_directory(&subdir_params, current_depth + 1, files_collected) {
@@ -188,10 +186,11 @@ impl LsTool {
             }
             output.join("\n")
         } else {
+            // Show one file per line for better readability
             files.iter()
                 .map(|f| if f.is_dir { format!("{}/", f.name) } else { f.name.clone() })
                 .collect::<Vec<_>>()
-                .join("  ")
+                .join("\n")
         };
 
         if truncated {
@@ -206,10 +205,13 @@ impl LsTool {
 
 **Usage:**
 - The `directory` parameter must be an absolute path to the location you wish to inspect.
-- It can recursively list contents and be configured to show hidden files or a detailed long format.
+- By default, lists files non-recursively to avoid overwhelming output.
+- Set `recursive: true` to include subdirectories (use with caution in large directories).
+- Default limit of 200 files prevents excessive output. Increase `max_files` if you need more, or set to `null` for unlimited.
 
 **Recommendations:**
-- While `ls` is excellent for general exploration, for more targeted file discovery, the `find` tool is often more efficient as it offers powerful content and name-based searching capabilities."#, capabilities = [ToolCapability::Read])]
+- For large directories, consider using the `find` tool instead, which offers powerful filtering and search capabilities.
+- Use `recursive: true` carefully, especially in directories like `node_modules/` which contain thousands of files."#, capabilities = [ToolCapability::Read])]
 impl LsTool {
     async fn execute(&self, params: LsToolParams) -> ToolResult {
         let mut files_collected = 0;
