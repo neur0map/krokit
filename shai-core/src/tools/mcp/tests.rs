@@ -148,6 +148,7 @@ mod tests {
         // Test HTTP config
         let http_config = McpConfig::Http {
             url: "http://localhost:8080".to_string(),
+            bearer_token: None
         };
         let _http_client = create_mcp_client(http_config);
         println!("✅ Successfully created HttpClient via factory");
@@ -171,7 +172,7 @@ mod tests {
         }
 
         // Create HTTP client for MCP server on localhost:8000/mcp
-        let mut client = HttpClient::new("https://mcp.eu.ovhcloud.com/mcp".to_string());
+        let mut client = HttpClient::new_with_auth("https://localhost:8000/mcp".to_string(), Some("TEST_BEARER".to_string()));
 
         // Test connection
         match client.connect().await {

@@ -16,6 +16,8 @@ use shai_core::agent::{Agent, AgentRequest, AgentEvent, AgentController, PublicA
 use shai_core::agent::events::{PermissionRequest, PermissionResponse};
 use shai_core::agent::output::PrettyFormatter;
 use shai_core::config::config::ShaiConfig;
+use shai_core::config::agent::AgentConfig;
+use shai_core::agent::builder::AgentBuilder;
 use shai_core::logging::LoggingConfig;
 use shai_core::runners::coder::coder::coder;
 use shai_core::tools::{ToolCall, ToolResult};
@@ -58,6 +60,7 @@ pub struct App<'a> {
     pub(crate) terminal_height: u16,
 
     pub(crate) agent: Option<AppRunningAgent>,
+    pub(crate) custom_agent: Option<Box<dyn Agent>>,
     
     pub(crate) state: AppModalState<'a>,
     pub(crate) formatter: PrettyFormatter, // streaming log formatter
@@ -71,13 +74,24 @@ pub struct App<'a> {
 
 // Agent-related Internals
 impl App<'_> {
-    pub async fn start_agent(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        // Try to load from config file first
-        let (llm, model) = ShaiConfig::get_llm().await?;
-        println!("\x1b[2m{} on {}\x1b[0m", model, llm.provider().name());
-        
-        // Create and start the agent
-        let mut agent = coder(Arc::new(llm), model);
+    pub async fn start_agent(&mut self, agent_name: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+        let mut agent: Box<dyn Agent> = if let Some(agent_name) = agent_name {
+            // Load custom agent config
+            let config = AgentConfig::load(agent_name)?;
+            
+            println!("\x1b[2mLoading custom agent '{}' - {}\x1b[0m", agent_name, config.description);
+            println!("\x1b[2m{} on {}\x1b[0m", config.llm_provider.model, config.llm_provider.provider);
+            
+            // Create agent from config
+            let agent_builder = AgentBuilder::from_config(config).await?;
+            Box::new(agent_builder.build())
+        } else {
+            // Use default coder agent
+            let (llm, model) = ShaiConfig::get_llm().await?;
+            println!("\x1b[2m{} on {}\x1b[0m", model, llm.provider().name());
+            
+            Box::new(coder(Arc::new(llm), model))
+        };
         
         // Get Agent I/O
         let controller = agent.controller();
@@ -154,6 +168,7 @@ impl App<'_> {
             terminal: None,
             terminal_height: 5,
             agent: None,
+            custom_agent: None,
             formatter: PrettyFormatter::new(),
             state: AppModalState::InputShown,
             input: InputArea::new(),
@@ -164,8 +179,8 @@ impl App<'_> {
         }
     }
 
-    pub async fn run(&mut self) -> io::Result<()> {
-        let x = self.try_run().await;
+    pub async fn run(&mut self, agent_name: Option<String>) -> io::Result<()> {
+        let x = self.try_run(agent_name).await;
         let _ = disable_raw_mode();
 
         if let Err(e) = x {
@@ -179,10 +194,15 @@ impl App<'_> {
         Ok(())
     }
 
-    async fn try_run(&mut self) ->Result<(), Box<dyn std::error::Error>> {
-        // Start the agent
-        self.start_agent().await.map_err(|_| -> Box<dyn std::error::Error> { 
-            format!("could not start shai agent, run shai auth first").into() 
+    async fn try_run(&mut self, agent_name: Option<String>) ->Result<(), Box<dyn std::error::Error>> {
+        // Start the agent (custom or default)
+        let agent_name_ref = agent_name.as_deref();
+        self.start_agent(agent_name_ref).await.map_err(|e| -> Box<dyn std::error::Error> { 
+            if agent_name_ref.is_some() {
+                format!("could not start custom agent '{}': {}", agent_name_ref.unwrap(), e).into()
+            } else {
+                format!("could not start shai agent, run shai auth first").into()
+            }
         })?;
         
         // create terminal

@@ -68,17 +68,20 @@ impl AnyTool for WrappedMcpTool {
 }
 
 /// Create AnyTool instances from an MCP client
-pub async fn get_mcp_tools(client: Box<dyn McpClient>) -> Result<Vec<Arc<dyn AnyTool>>, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn get_mcp_tools(mut client: Box<dyn McpClient>) -> Result<Vec<Box<dyn AnyTool>>, Box<dyn std::error::Error + Send + Sync>> {
+    // Auto-connect if not already connected
+    client.connect().await?;
+    
     let tool_descriptions = client.list_tools().await?;
     let client_ref = Arc::new(Mutex::new(client));
     
-    let wrapped_tools: Vec<Arc<dyn AnyTool>> = tool_descriptions
+    let wrapped_tools: Vec<Box<dyn AnyTool>> = tool_descriptions
         .into_iter()
         .map(|desc| {
-            Arc::new(WrappedMcpTool {
+            Box::new(WrappedMcpTool {
                 desc,
                 client: client_ref.clone(),
-            }) as Arc<dyn AnyTool>
+            }) as Box<dyn AnyTool>
         })
         .collect();
     

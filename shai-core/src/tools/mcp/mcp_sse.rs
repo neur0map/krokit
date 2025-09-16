@@ -27,6 +27,11 @@ impl SseClient {
 #[async_trait]
 impl McpClient for SseClient {
     async fn connect(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Only connect if not already connected
+        if self.service.is_some() {
+            return Ok(());
+        }
+        
         let transport = SseClientTransport::start(self.url.as_str()).await?;
         let client_info = ClientInfo {
             protocol_version: Default::default(),

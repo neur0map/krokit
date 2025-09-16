@@ -30,6 +30,11 @@ impl StdioClient {
 #[async_trait]
 impl McpClient for StdioClient {
     async fn connect(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Only connect if not already connected
+        if self.service.is_some() {
+            return Ok(());
+        }
+        
         let mut cmd = Command::new(&self.command);
         for arg in &self.args {
             cmd.arg(arg);

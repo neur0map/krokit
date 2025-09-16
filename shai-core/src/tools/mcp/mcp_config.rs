@@ -1,11 +1,16 @@
 use crate::tools::McpClient;
+use serde::{Serialize, Deserialize};
 
 use super::{StdioClient, HttpClient, SseClient};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum McpConfig {
+    #[serde(rename = "stdio")]
     Stdio { command: String, args: Vec<String> },
-    Http { url: String },
+    #[serde(rename = "http")]
+    Http { url: String, bearer_token: Option<String> },
+    #[serde(rename = "sse")]
     Sse { url: String },
 }
 
@@ -15,8 +20,8 @@ pub fn create_mcp_client(config: McpConfig) -> Box<dyn McpClient> {
         McpConfig::Stdio { command, args } => {
             Box::new(StdioClient::new(command, args))
         }
-        McpConfig::Http { url } => {
-            Box::new(HttpClient::new(url))
+        McpConfig::Http { url, bearer_token } => {
+            Box::new(HttpClient::new_with_auth(url, bearer_token))
         }
         McpConfig::Sse { url } => {
             Box::new(SseClient::new(url))

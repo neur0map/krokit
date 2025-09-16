@@ -10,6 +10,8 @@ use ringbuffer::RingBuffer;
 use console::strip_ansi_codes;
 use shai_core::agent::LoggingConfig;
 use shai_core::config::config::ShaiConfig;
+use shai_core::config::agent::AgentConfig;
+use shai_core::agent::builder::AgentBuilder;
 use shai_core::runners::clifixer::fix::clifix;
 use shai_llm::{ChatMessage, ChatMessageContent};
 use tui::auth::AppAuth;
@@ -62,9 +64,25 @@ struct Cli {
     /// Remove specific tools from the default set (comma-separated)
     #[arg(long)]
     remove: Option<String>,
+    /// Use a specific custom agent
+    #[arg(long)]
+    agent: Option<String>,
     /// Auto-fix mode: if no subcommand provided, these args go to fix
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     args: Vec<String>,
+}
+
+#[derive(Subcommand)]
+enum AgentAction {
+    /// List all available agents
+    List,
+    /// Start SHAI with a specific agent configuration
+    Run {
+        /// Name of the agent to run
+        agent_name: String,
+        /// Goal or initial prompt for the agent (optional)
+        goal: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -87,6 +105,11 @@ enum Commands {
     Status,
     /// Configure SHAI with your AI provider
     Auth,
+    /// Agent management commands
+    Agent {
+        #[command(subcommand)]
+        action: AgentAction,
+    },
     #[cfg(unix)]
     /// Send pre-command hook (before command execution)
     #[command(hide = true)]
@@ -128,6 +151,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(Commands::Auth {  }) => {
             handle_config().await?;
         },
+        Some(Commands::Agent { action }) => {
+            handle_agent_command(action).await?;
+        },
         #[cfg(unix)]
         Some(Commands::Precmd { command }) => {
             let command_str = command.join(" ");
@@ -165,7 +191,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 handle_fix(messages, cli.list_tools, cli.tools, cli.remove, cli.trace).await?;
             } else {
                 // No input, show TUI
-                handle_main().await?;
+                handle_main(cli.agent).await?;
             }
         }
     }
@@ -192,11 +218,11 @@ async fn default_config(default_config_url: Option<String>) {
     let _ = config.save();
 }
 
-async fn handle_main() -> Result<(), Box<dyn std::error::Error>> {
+async fn handle_main(agent_name: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     let logo = logo();
     println!("{}", apply_gradient(&logo, SHAI_YELLOW, SHAI_YELLOW));
     let mut app = App::new();
-    match app.run().await {
+    match app.run(agent_name).await {
         Err(e) => eprintln!("error: {}",e),
         _ => {}
     }
@@ -408,6 +434,37 @@ pub async fn handle_postcmd(exit_code: i32, command: String) -> Result<(), Box<d
         }
     }
     
+    Ok(())
+}
+
+async fn handle_agent_command(action: AgentAction) -> Result<(), Box<dyn std::error::Error>> {
+    let agents = AgentConfig::list_agents()?;
+    match action {
+        AgentAction::List => {
+            if agents.is_empty() {
+                println!("No custom agents found.");
+                println!("Create agent configs in ~/.config/shai/agents/");
+            } else {
+                println!("Available agents:");
+                for agent in agents {
+                    match AgentConfig::load(&agent) {
+                        Ok(config) => {
+                            println!("  {} - {}", agent, config.description);
+                        }
+                        Err(_) => {
+                            println!("  {} - (config error)", agent);
+                        }
+                    }
+                }
+            }
+        }
+        AgentAction::Run { agent_name, goal } => {
+            println!("Running agent '{}' is not yet implemented", agent_name);
+            if let Some(goal) = goal {
+                println!("Goal: {}", goal);
+            }
+        }
+    }
     Ok(())
 }
 

@@ -7,23 +7,39 @@ use tracing::debug;
 
 use crate::agent::brain::ThinkerDecision;
 use crate::agent::{Agent, AgentBuilder, AgentError, Brain, ThinkerContext};
-use crate::runners::coder::prompt::get_todo_read;
 use crate::tools::types::{ContainsAnyTool, IntoToolBox};
 use shai_llm::tool::LlmToolCall;
 use crate::tools::{AnyTool, BashTool, EditTool, FetchTool, FindTool, LsTool, MultiEditTool, ReadTool, TodoReadTool, TodoWriteTool, WriteTool, TodoStorage, FsOperationLog};
 
-use super::prompt::coder_next_step;
+use super::prompt::{render_system_prompt_template, get_todo_read};
 
 #[derive(Clone)]
 pub struct CoderBrain {
     pub llm: Arc<LlmClient>,
     pub model: String,
+    pub system_prompt_template: String,
+    pub temperature: f32,
 }
 
 impl CoderBrain {
     pub fn new(llm: Arc<LlmClient>, model: String) -> Self {
         debug!(target: "brain::coder", provider =?llm.provider_name(), model = ?model);
-        Self { llm, model }
+        Self { 
+            llm, 
+            model,
+            system_prompt_template: "{{CODER_BASE_PROMPT}}".to_string(),
+            temperature: 0.3,
+        }
+    }
+
+    pub fn with_custom_prompt(llm: Arc<LlmClient>, model: String, system_prompt_template: String, temperature: f32) -> Self {
+        debug!(target: "brain::coder", provider =?llm.provider_name(), model = ?model);
+        Self { 
+            llm, 
+            model,
+            system_prompt_template,
+            temperature,
+        }
     }
 }
 
@@ -33,8 +49,10 @@ impl Brain for CoderBrain {
     async fn next_step(&mut self, context: ThinkerContext) -> Result<ThinkerDecision, AgentError> {
         let mut trace = context.trace.read().await.clone();
 
-        // big brain system prompt 
-        let mut system_prompt = coder_next_step();
+        // Render the user's system prompt template
+        let mut system_prompt = render_system_prompt_template(&self.system_prompt_template);
+        
+        // Add todo status if available
         if let Some(tool) = context.available_tools.get_tool("todo_read") {
             let todo_status = get_todo_read(&tool).await;
             system_prompt += &todo_status;
@@ -45,10 +63,11 @@ impl Brain for CoderBrain {
             name: None,
         });
 
-        // get next step
+        // get next step with custom temperature
         let request = ChatCompletionParametersBuilder::default()
             .model(&self.model)
             .messages(trace)
+            .temperature(self.temperature)
             .build()
             .map_err(|e| AgentError::LlmError(e.to_string()))?;
         
@@ -89,7 +108,7 @@ pub fn coder(llm: Arc<LlmClient>, model: String) -> impl Agent {
     let todowrite = Box::new(TodoWriteTool::new(todo_storage.clone()));
     let write = Box::new(WriteTool::new(fs_log.clone()));
     let toolbox: Vec<Box<dyn AnyTool>> = vec![bash, edit, multiedit, fetch, find, ls, read, todoread, todowrite, write];
-    
+
     AgentBuilder::new(Box::new(CoderBrain::new(llm.clone(), model)))
     .tools(toolbox)
     .build()

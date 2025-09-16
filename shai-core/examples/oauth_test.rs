@@ -7,7 +7,7 @@ async fn main() {
     match signin_oauth("https://mcp.eu.ovhcloud.com/").await {
         Ok(access_token) => {
             println!("✅ OAuth flow completed successfully!");
-            println!("🎫 Access Token: ***");
+            println!("🎫 Access Token: {}", access_token);
             println!("🔑 Token length: {} characters", access_token.len());
         }
         Err(e) => {

@@ -128,7 +128,7 @@ pub async fn signin_oauth(base_url: &str) -> anyhow::Result<String> {
                         <style>
                             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
                             body {{ 
-                                background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
+                                background: linear-gradient(135deg, #667eea 0%, #f093fb 100%);
                                 font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
                                 height: 100vh;
                                 display: flex;
@@ -171,12 +171,14 @@ pub async fn signin_oauth(base_url: &str) -> anyhow::Result<String> {
                     <body>
                         <div class="terminal">
                             <div class="divider">/////////////////////////////////////////////////////</div>
-                            <div class="logo">  ███╗      ███████╗██╗  ██╗ █████╗ ██╗
+                            <div class="logo">  
+  ███╗      ███████╗██╗  ██╗ █████╗ ██╗
   ╚═███╗    ██╔════╝██║  ██║██╔══██╗██║
      ╚═███  ███████╗███████║███████║██║
     ███╔═╝  ╚════██║██╔══██║██╔══██║██║
   ███╔═╝    ███████║██║  ██║██║  ██║██║
-  ╚══╝      ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝</div>
+  ╚══╝      ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
+                            </div>
                             <div class="divider">/////////////////////////////////////////////////////</div>
                             <div class="command"><span class="prompt">></span> {}</div>
                         </div>

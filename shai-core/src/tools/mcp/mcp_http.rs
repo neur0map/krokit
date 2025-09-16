@@ -12,13 +12,19 @@ use super::mcp::{McpClient, McpToolDescription};
 
 pub struct HttpClient {
     url: String,
+    bearer_token: Option<String>,
     service: Option<RunningService<RoleClient, InitializeRequestParam>>,
 }
 
 impl HttpClient {
     pub fn new(url: String) -> Self {
+        Self::new_with_auth(url, None)
+    }
+
+    pub fn new_with_auth(url: String, bearer_token: Option<String>) -> Self {
         Self {
             url,
+            bearer_token,
             service: None,
         }
     }
@@ -27,7 +33,33 @@ impl HttpClient {
 #[async_trait]
 impl McpClient for HttpClient {
     async fn connect(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let transport = StreamableHttpClientTransport::from_uri(self.url.as_str());
+        // Only connect if not already connected
+        if self.service.is_some() {
+            return Ok(());
+        }
+        
+        let transport = if let Some(token) = &self.bearer_token {
+            // Create a custom reqwest client with default bearer token
+            let mut default_headers = reqwest::header::HeaderMap::new();
+            default_headers.insert(
+                reqwest::header::AUTHORIZATION,
+                reqwest::header::HeaderValue::from_str(&format!("Bearer {}", token))?
+            );
+            let client = reqwest::Client::builder()
+                .default_headers(default_headers)
+                .build()?;
+            
+            StreamableHttpClientTransport::with_client(
+                client,
+                rmcp::transport::streamable_http_client::StreamableHttpClientTransportConfig {
+                    uri: self.url.clone().into(),
+                    ..Default::default()
+                }
+            )
+        } else {
+            StreamableHttpClientTransport::from_uri(self.url.as_str())
+        };
+
         let client_info = ClientInfo {
             protocol_version: Default::default(),
             capabilities: ClientCapabilities::default(),
