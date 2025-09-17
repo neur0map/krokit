@@ -3021,7 +3021,7 @@ dependencies = [
 
 [[package]]
 name = "shai"
-version = "0.1.3-dev"
+version = "0.1.5"
 dependencies = [
  "ansi-to-tui",
  "async-trait",
@@ -3049,7 +3049,7 @@ dependencies = [
 
 [[package]]
 name = "shai-core"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3087,7 +3087,7 @@ dependencies = [
 
 [[package]]
 name = "shai-llm"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -3111,7 +3111,7 @@ dependencies = [
 
 [[package]]
 name = "shai-macros"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "proc-macro2",
  "quote",
