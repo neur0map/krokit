@@ -10,6 +10,8 @@ use ringbuffer::RingBuffer;
 use console::strip_ansi_codes;
 use shai_core::agent::LoggingConfig;
 use shai_core::config::config::ShaiConfig;
+use shai_core::config::agent::AgentConfig;
+use shai_core::agent::builder::AgentBuilder;
 use shai_core::runners::clifixer::fix::clifix;
 use shai_llm::{ChatMessage, ChatMessageContent};
 use tui::auth::AppAuth;
@@ -40,6 +42,8 @@ use shell::rc::{ShellType, get_shell};
 #[cfg(unix)]
 use fc::client::ShaiSessionClient;
 
+use crate::headless::tools::list_all_tools;
+
 #[derive(Parser)]
 #[command(name = "shai")]
 #[command(about = "SHAI - Smart terminal wrapper with advanced features")]
@@ -68,6 +72,15 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+enum AgentAction {
+    /// List all available agents
+    List,
+    #[command(external_subcommand)]
+    /// Run a specific agent by name
+    Agent(Vec<String>),
+}
+
+#[derive(Subcommand)]
 enum Commands {
     #[cfg(unix)]
     /// Start a PTY session with the specified shell
@@ -87,6 +100,11 @@ enum Commands {
     Status,
     /// Configure SHAI with your AI provider
     Auth,
+    /// Agent management commands
+    Agent {
+        #[command(subcommand)]
+        action: AgentAction,
+    },
     #[cfg(unix)]
     /// Send pre-command hook (before command execution)
     #[command(hide = true)]
@@ -128,6 +146,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(Commands::Auth {  }) => {
             handle_config().await?;
         },
+        Some(Commands::Agent { action }) => {
+            handle_agent_command(action).await?;
+        },
         #[cfg(unix)]
         Some(Commands::Precmd { command }) => {
             let command_str = command.join(" ");
@@ -160,12 +181,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 messages.push(cli.args.join(" "));
             }
             
+            // Handle --list-tools flag
+            if cli.list_tools {
+                list_all_tools();
+                return Ok(());
+            }
+
+
             if !messages.is_empty() || cli.list_tools {
                 // Route to fix command with combined messages and global options
-                handle_fix(messages, cli.list_tools, cli.tools, cli.remove, cli.trace).await?;
+                handle_fix(messages, cli.tools, cli.remove, cli.trace, None).await?;
             } else {
                 // No input, show TUI
-                handle_main().await?;
+                handle_main(None).await?;
             }
         }
     }
@@ -192,11 +220,11 @@ async fn default_config(default_config_url: Option<String>) {
     let _ = config.save();
 }
 
-async fn handle_main() -> Result<(), Box<dyn std::error::Error>> {
+async fn handle_main(agent_name: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     let logo = logo();
     println!("{}", apply_gradient(&logo, SHAI_YELLOW, SHAI_YELLOW));
     let mut app = App::new();
-    match app.run().await {
+    match app.run(agent_name).await {
         Err(e) => eprintln!("error: {}",e),
         _ => {}
     }
@@ -215,10 +243,10 @@ async fn ensure_config() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn handle_fix(
     prompt: Vec<String>, 
-    list_tools: bool, 
     tools: Option<String>, 
     remove: Option<String>,
-    trace: bool
+    trace: bool,
+    agent_name: Option<String>
 ) -> Result<(), Box<dyn std::error::Error>> {
     let initial_trace: Vec<ChatMessage> = prompt.into_iter()
         .map(|p| ChatMessage::User { 
@@ -227,7 +255,7 @@ async fn handle_fix(
         })
         .collect();
     
-    AppHeadless::new().run(initial_trace, list_tools, tools, remove, trace).await
+    AppHeadless::new().run(initial_trace, tools, remove, trace, agent_name).await
 }
 
 #[cfg(unix)]
@@ -408,6 +436,61 @@ pub async fn handle_postcmd(exit_code: i32, command: String) -> Result<(), Box<d
         }
     }
     
+    Ok(())
+}
+
+async fn handle_agent_command(action: AgentAction) -> Result<(), Box<dyn std::error::Error>> {
+    match action {
+        AgentAction::List => {
+            let agents = AgentConfig::list_agents()?;
+            if agents.is_empty() {
+                println!("No custom agents found.");
+                println!("Create agent configs in ~/.config/shai/agents/");
+            } else {
+                println!("Available agents:");
+                
+                // Find the longest agent name for alignment
+                let max_name_len = agents.iter().map(|name| name.len()).max().unwrap_or(0);
+                
+                for agent in agents {
+                    match AgentConfig::load(&agent) {
+                        Ok(config) => {
+                            println!("  \x1b[1m{:<width$}\x1b[0m \x1b[2m{}\x1b[0m", 
+                                agent, 
+                                config.description,
+                                width = max_name_len
+                            );
+                        }
+                        Err(_) => {
+                            println!("  \x1b[1m{:<width$}\x1b[0m \x1b[2m(config error)\x1b[0m", 
+                                agent,
+                                width = max_name_len
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        AgentAction::Agent(args) => {
+            if args.is_empty() {
+                eprintln!("Error: Please specify an agent name");
+                eprintln!("Usage: shai agent <agent_name> [prompt]");
+                return Ok(());
+            }
+            
+            let agent_name = &args[0];
+            let prompt_args: Vec<String> = args.iter().skip(1).cloned().collect();
+            
+            if prompt_args.is_empty() {
+                // No prompt provided, start TUI mode with the agent
+                handle_main(Some(agent_name.clone())).await?;
+            } else {
+                // Prompt provided, run in headless mode
+                let prompt = prompt_args.join(" ");
+                handle_fix(vec![prompt], None, None, false, Some(agent_name.clone())).await?;
+            }
+        }
+    }
     Ok(())
 }
 

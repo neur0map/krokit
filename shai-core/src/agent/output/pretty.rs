@@ -8,13 +8,18 @@ use crate::tools::{ToolCall, ToolResult};
 /// Pretty formatter that formats agent events into strings for display
 pub struct PrettyFormatter {
     skin: MadSkin,
+    max_preview_lines: usize,
 }
 
 impl PrettyFormatter {
     pub fn new() -> Self {
+        Self::with_max_preview_lines(10)
+    }
+
+    pub fn with_max_preview_lines(max_preview_lines: usize) -> Self {
         let mut skin = MadSkin::default_dark();
         skin.code_block.set_fgbg(Color::DarkGrey, Color::Reset);
-        Self { skin }
+        Self { skin, max_preview_lines }
     }
 
     /// Format an agent event into a displayable string
@@ -197,16 +202,16 @@ impl PrettyFormatter {
                         output.push_str(&format!("  ⎿ \x1b[1m{}\x1b[0m lines, \x1b[1m{}\x1b[0m chars", lines, chars));
                     }
                     
-                    // Show first 5 lines as a code block with proper indentation
-                    let preview_lines: Vec<&str> = tool_output.lines().take(40).collect();
+                    // Show first N lines for user display
+                    let preview_lines: Vec<&str> = tool_output.lines().take(self.max_preview_lines).collect();
                     if !preview_lines.is_empty() {
                         let mut markdown_content = String::new();
                         markdown_content.push_str("\n");
                         for line in preview_lines {
                             markdown_content.push_str(&format!("      {}\n", line));
                         }
-                        if lines > 40 {
-                            markdown_content.push_str(&format!("      ... {} more lines\n", lines - 40));
+                        if lines > self.max_preview_lines {
+                            markdown_content.push_str(&format!("      ... {} more lines\n", lines - self.max_preview_lines));
                         }
                         
                         // Render markdown content and append to output

@@ -33,13 +33,13 @@ mod llm_integration_tests {
         let model = llm_client.default_model().await.expect("default model");
         
         println!("Testing tool '{}' with model '{}' from provider '{}'", 
-                 tool.name(), model, llm_client.provider_name());
+                 &tool.name(), model, llm_client.provider_name());
         
         // Create messages that should trigger tool usage
         let messages = vec![
             ChatMessage::System {
                 content: ChatMessageContent::Text(
-                    format!("You are a helpful assistant. You must absolutely use the {} tool to respond to the user's request. Do not explain or apologize, just use the tool.", tool.name())
+                    format!("You are a helpful assistant. You must absolutely use the {} tool to respond to the user's request. Do not explain or apologize, just use the tool.", &tool.name())
                 ),
                 name: None,
             },
@@ -89,13 +89,13 @@ mod llm_integration_tests {
                 if let Some(calls) = tool_calls {
                     debug!(target: "misc", "Tool calls found: {}", calls.len());
                     for call in calls {
-                        debug!(target: "misc", "Tool call: {} -> {}", call.function.name, tool.name());
+                        debug!(target: "misc", "Tool call: {} -> {}", call.function.name, &tool.name());
                     }
                     let tool_was_called = calls.iter().any(|call| call.function.name == tool.name());
                     if tool_was_called {
-                        println!("✅ Tool '{}' PASSED with provider '{}'", tool.name(), llm_client.provider_name());
+                        println!("✅ Tool '{}' PASSED with provider '{}'", &tool.name(), llm_client.provider_name());
                     } else {
-                        println!("❌ Tool '{}' FAILED - tool not called", tool.name());
+                        println!("❌ Tool '{}' FAILED - tool not called", &tool.name());
                     }
                     return Ok(tool_was_called);
                 } else {
@@ -108,7 +108,7 @@ mod llm_integration_tests {
             debug!(target: "misc", "No choices in response");
         }
         
-        println!("❌ Tool '{}' FAILED - no tool calls in response", tool.name());
+        println!("❌ Tool '{}' FAILED - no tool calls in response", &tool.name());
         Ok(false)
     }
 

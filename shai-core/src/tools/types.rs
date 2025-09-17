@@ -204,12 +204,12 @@ pub trait ContainsAnyTool {
 
 impl ContainsAnyTool for AnyToolBox {
     fn contains_tool(&self, name: &str) -> bool {
-        self.iter().any(|tool| tool.name() == name)
+        self.iter().any(|tool| &tool.name() == name)
     }
 
     fn get_tool(&self, name: &str) -> Option<Arc<dyn AnyTool>> {
         self.iter()
-        .filter(|tool| tool.name() == name)
+        .filter(|tool| &tool.name() == name)
         .next()
         .cloned()
     }

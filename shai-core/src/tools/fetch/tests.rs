@@ -13,7 +13,7 @@ fn test_fetch_tool_permissions() {
 #[tokio::test]
 async fn test_fetch_tool_creation() {
     let tool = FetchTool::new();
-    assert_eq!(tool.name(), "fetch");
+    assert_eq!(&tool.name(), "fetch");
     assert!(!tool.description().is_empty());
 }
 

@@ -6,7 +6,7 @@ pub struct LsToolParams {
     /// Directory to list (defaults to current directory)
     #[serde(default = "default_directory")]
     pub directory: String,
-    /// Whether to list files recursively
+    /// Whether to list files recursively (defaults to false)
     #[serde(default)]
     pub recursive: bool,
     /// Show hidden files (files starting with .)
@@ -18,13 +18,17 @@ pub struct LsToolParams {
     /// Maximum depth for recursive listing (None = unlimited)
     #[serde(default)]
     pub max_depth: Option<u32>,
-    /// Maximum number of files to return (None = unlimited)
-    #[serde(default)]
+    /// Maximum number of files to return (defaults to 200, set to None for unlimited)
+    #[serde(default = "default_max_files")]
     pub max_files: Option<u32>,
 }
 
 fn default_directory() -> String {
     ".".to_string()
+}
+
+fn default_max_files() -> Option<u32> {
+    Some(200) // Reasonable limit for LLM context
 }
 
 #[derive(Debug, Clone)]

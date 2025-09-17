@@ -4,7 +4,7 @@ use crate::tools::{AnyTool, ToolResult};
 
 use super::env::*;
 
-static CODER_PROMPT: &str = r#"
+static CODER_GUIDELINE: &str = r#"
 You are SHAI (for Shell AI), a coding assistant from OVHcloud, designed to be a helpful and secure pair programmer. Your purpose is to assist users with their software engineering tasks by leveraging the tools at your disposal.
  
 ### Core Principles:
@@ -38,59 +38,127 @@ Do not commit changes to version control unless explicitly asked to do so by the
 
 **Proactiveness**
 You are allowed to be proactive and take initiative that are aligned with the user intent. For instance if the user asks you to make a function, you can proactively follow your implementation with a call to compile / test the project to make sure that your change were correct. You must however avoid proactively taking actions that are out of scope or unnecessary. For instance if the user asks you to modify a function, you should not immediately assume that this function should be used everywhere. You have to strike a balance between helpfulness, autonomy while also keeping the user in the loop.
+"#;
 
+static CODER_ENV: &str = r#"
 ### Environment Information:
 
 You are running in the following environment:
 <env>
-  Today's date: {today}
-  Platform: {platform}
-  OS Version: {os_version}
-  Working directory: {working_dir}
-  Is Working directory a git repo: {is_git_repo}  
+  Today's date: {{TODAY}}
+  Platform: {{PLATFORM}}
+  OS Version: {{OS_VERSION}}
+  Working directory: {{WORKING_DIR}}
+  Is Working directory a git repo: {{IS_GIT_REPO}}  
 </env>
 "#;
+
+static CODER_PROMPT: &str = r#"{{CODER_GUIDELINE}}
+
+{{CODER_ENV}}"#;
 
 static CODER_PROMPT_GIT: &str = r#"
 <git>
 gitStatus: This is the current git status at the last message of the conversation.
 
-Current branch: {git_branch}
+Current branch: {{GIT_BRANCH}}
 
 Status: 
-{git_status}
+{{GIT_STATUS}}
 
 Recent commits: 
-{git_log}
+{{GIT_LOG}}
 </git>
 "#;
 
-pub fn coder_next_step() -> String {
-    let working_dir = get_working_dir();
-    let os = get_os_version();
-    let platform = get_platform();
-    let today = get_today();
-    let git_repo = is_git_repo();
-    let mut prompt = CODER_PROMPT
-    .replace("working_dir", &working_dir)
-    .replace("is_git_repo", &git_repo.to_string())
-    .replace("platform", &platform)
-    .replace("os_version", &os)
-    .replace("today", &today)
-    .to_string();
-
-    if git_repo {
-        let git_branch = get_git_branch();
-        let git_log = get_git_log();
-        let git_status = get_git_status();
-        let git_info = CODER_PROMPT_GIT
-        .replace("git_branch", &git_branch)
-        .replace("git_status", &git_status)
-        .replace("git_log", &git_log);
-        prompt += &git_info;
+pub fn render_system_prompt_template(template: &str) -> String {
+    // Early return if template has no placeholders
+    if !template.contains("{{") {
+        return template.to_string();
     }
 
-    prompt
+    let mut result = template.to_string();
+    
+    // Only gather environment info if needed
+    if result.contains("{{TODAY}}") {
+        result = result.replace("{{TODAY}}", &get_today());
+    }
+    if result.contains("{{PLATFORM}}") {
+        result = result.replace("{{PLATFORM}}", &get_platform());
+    }
+    if result.contains("{{OS_VERSION}}") {
+        result = result.replace("{{OS_VERSION}}", &get_os_version());
+    }
+    if result.contains("{{WORKING_DIR}}") {
+        result = result.replace("{{WORKING_DIR}}", &get_working_dir());
+    }
+    if result.contains("{{IS_GIT_REPO}}") {
+        result = result.replace("{{IS_GIT_REPO}}", &is_git_repo().to_string());
+    }
+
+    // Handle CODER_GUIDELINE placeholder
+    if result.contains("{{CODER_GUIDELINE}}") {
+        result = result.replace("{{CODER_GUIDELINE}}", CODER_GUIDELINE);
+    }
+
+    // Handle CODER_ENV placeholder
+    if result.contains("{{CODER_ENV}}") {
+        let coder_env = CODER_ENV
+            .replace("{{TODAY}}", &get_today())
+            .replace("{{PLATFORM}}", &get_platform())
+            .replace("{{OS_VERSION}}", &get_os_version())
+            .replace("{{WORKING_DIR}}", &get_working_dir())
+            .replace("{{IS_GIT_REPO}}", &is_git_repo().to_string());
+        result = result.replace("{{CODER_ENV}}", &coder_env);
+    }
+
+    // Only build coder base prompt if needed
+    if result.contains("{{CODER_BASE_PROMPT}}") {
+        let git_repo = is_git_repo();
+        let mut coder_base_prompt = CODER_PROMPT
+            .replace("{{CODER_GUIDELINE}}", CODER_GUIDELINE)
+            .replace("{{CODER_ENV}}", &CODER_ENV
+                .replace("{{TODAY}}", &get_today())
+                .replace("{{PLATFORM}}", &get_platform())
+                .replace("{{OS_VERSION}}", &get_os_version())
+                .replace("{{WORKING_DIR}}", &get_working_dir())
+                .replace("{{IS_GIT_REPO}}", &git_repo.to_string()));
+
+        if git_repo {
+            let git_info = CODER_PROMPT_GIT
+                .replace("{{GIT_BRANCH}}", &get_git_branch())
+                .replace("{{GIT_STATUS}}", &get_git_status())
+                .replace("{{GIT_LOG}}", &get_git_log());
+            coder_base_prompt += &git_info;
+        }
+        result = result.replace("{{CODER_BASE_PROMPT}}", &coder_base_prompt);
+    }
+
+    // Only get git info if individual git placeholders are used
+    if result.contains("{{GIT_BRANCH}}") || result.contains("{{GIT_STATUS}}") || result.contains("{{GIT_LOG}}") {
+        if is_git_repo() {
+            if result.contains("{{GIT_BRANCH}}") {
+                result = result.replace("{{GIT_BRANCH}}", &get_git_branch());
+            }
+            if result.contains("{{GIT_STATUS}}") {
+                result = result.replace("{{GIT_STATUS}}", &get_git_status());
+            }
+            if result.contains("{{GIT_LOG}}") {
+                result = result.replace("{{GIT_LOG}}", &get_git_log());
+            }
+        } else {
+            result = result.replace("{{GIT_BRANCH}}", "");
+            result = result.replace("{{GIT_STATUS}}", "");
+            result = result.replace("{{GIT_LOG}}", "");
+        }
+    }
+
+    result
+}
+
+// Backward compatibility
+pub fn coder_next_step() -> String {
+    render_system_prompt_template("{{CODER_BASE_PROMPT}}")
 }
 
 
@@ -98,7 +166,7 @@ static TODO_STATUS: &str = r#"
 <todo>
 todoStatus: This is the current status of the todo list
 
-{todo_list}
+{{TODO_LIST}}
 </todo>
 "#;
 
@@ -106,10 +174,10 @@ pub async fn get_todo_read(todo_tool: &Arc<dyn AnyTool>) -> String {
     let todo = todo_tool.execute_json(serde_json::json!({})).await;
     if let ToolResult::Success { output, metadata } = todo {
         TODO_STATUS.to_string()
-        .replace("todo_list", &output)
+        .replace("{{TODO_LIST}}", &output)
     } else {
         TODO_STATUS.to_string()
-        .replace("todo_list", "the todo list is empty..")
+        .replace("{{TODO_LIST}}", "the todo list is empty..")
     }
 }
 

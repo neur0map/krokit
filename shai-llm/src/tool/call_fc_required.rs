@@ -10,12 +10,12 @@ use crate::{provider::LlmError, tool::ToolBox, LlmClient, ToolDescription};
 pub struct NoOp {}
 
 impl ToolDescription for NoOp {
-    fn name(&self) -> &'static str {
-        "no_op"
+    fn name(&self) -> String {
+        "no_op".to_string()
     }
 
-    fn description(&self) -> &'static str {
-        "this tool is a no_op and does nothing. This tool must be called if you don't want to call any tool."
+    fn description(&self) -> String {
+        "this tool is a no_op and does nothing. This tool must be called if you don't want to call any tool.".to_string()
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

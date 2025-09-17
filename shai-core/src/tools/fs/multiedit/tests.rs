@@ -20,7 +20,7 @@ fn test_multiedit_tool_permissions() {
 async fn test_multiedit_tool_creation() {
     let log = Arc::new(FsOperationLog::new());
     let tool = MultiEditTool::new(log);
-    assert_eq!(tool.name(), "multiedit");
+    assert_eq!(&tool.name(), "multiedit");
     assert!(!tool.description().is_empty());
 }
 

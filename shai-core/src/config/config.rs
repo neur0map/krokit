@@ -5,6 +5,7 @@ use std::os::unix::fs::PermissionsExt;
 use reqwest::Url;
 use serde::{Serialize, Deserialize};
 use shai_llm::{LlmClient, ToolCallMethod};
+use crate::tools::mcp::McpConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProviderConfig {
@@ -18,6 +19,8 @@ pub struct ProviderConfig {
 pub struct ShaiConfig {
     pub providers: Vec<ProviderConfig>,
     pub selected_provider: usize,
+    #[serde(default)]
+    pub mcp_configs: HashMap<String, McpConfig>,
 }
 
 impl ShaiConfig {
@@ -177,6 +180,42 @@ impl ShaiConfig {
             })
             .collect()
     }
+
+    pub fn add_mcp_config(&mut self, name: String, config: McpConfig) -> Option<McpConfig> {
+        self.mcp_configs.insert(name, config)
+    }
+
+    pub fn remove_mcp_config(&mut self, name: &str) -> Option<McpConfig> {
+        self.mcp_configs.remove(name)
+    }
+
+    pub fn get_mcp_config(&self, name: &str) -> Option<&McpConfig> {
+        self.mcp_configs.get(name)
+    }
+
+    pub fn list_mcp_configs(&self) -> Vec<(String, String)> {
+        self.mcp_configs
+            .iter()
+            .map(|(name, config)| {
+                let description = match config {
+                    McpConfig::Stdio { command, .. } => format!("stdio: {}", command),
+                    McpConfig::Http { url, bearer_token } => {
+                        if bearer_token.is_some() {
+                            format!("http: {} (authenticated)", url)
+                        } else {
+                            format!("http: {}", url)
+                        }
+                    },
+                    McpConfig::Sse { url } => format!("sse: {}", url),
+                };
+                (name.clone(), description)
+            })
+            .collect()
+    }
+
+    pub fn has_mcp_config(&self, name: &str) -> bool {
+        self.mcp_configs.contains_key(name)
+    }
 }
 
 impl Default for ShaiConfig {
@@ -192,6 +231,7 @@ impl Default for ShaiConfig {
                 tool_method: ToolCallMethod::FunctionCall
             }],
             selected_provider: 0,
+            mcp_configs: HashMap::new(),
         }
     }
 }

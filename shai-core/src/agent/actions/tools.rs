@@ -172,7 +172,7 @@ impl AgentCore {
             // check permission, we allow all Read Tool
             let can_run = tool.capabilities().is_empty()  
             || tool.capabilities() == &[ToolCapability::Read]
-            || claims.read().await.is_permitted(tool.name(), &call.parameters);
+            || claims.read().await.is_permitted(&tool.name(), &call.parameters);
 
             // request permission if needed (|| is short-circuiting, so won't call if can_run is true)
             let can_run = can_run || match Self::request_permission_if_needed(&call, &tool, &public_event_tx, &mut internal_rx, &cancel_token).await {

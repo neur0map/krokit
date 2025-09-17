@@ -26,12 +26,12 @@ mod structured_output_integration_tests {
     pub struct ReadTool;
 
     impl ToolDescription for ReadTool {
-        fn name(&self) -> &'static str {
-            "read_file"
+        fn name(&self) -> String {
+            "read_file".to_string()
         }
 
-        fn description(&self) -> &'static str {
-            "Read a file from the filesystem"
+        fn description(&self) -> String {
+            "Read a file from the filesystem".to_string()
         }
 
         fn parameters_schema(&self) -> serde_json::Value {
@@ -45,12 +45,12 @@ mod structured_output_integration_tests {
     pub struct WriteTool;
 
     impl ToolDescription for WriteTool {
-        fn name(&self) -> &'static str {
-            "write_file"
+        fn name(&self) -> String {
+            "write_file".to_string()
         }
 
-        fn description(&self) -> &'static str {
-            "Write content to a file"
+        fn description(&self) -> String {
+            "Write content to a file".to_string()
         }
 
         fn parameters_schema(&self) -> serde_json::Value {

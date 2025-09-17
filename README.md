@@ -59,6 +59,24 @@ echo "make me a hello world in main.py" | shai --trace | shai "now run it!"
 
 ![shai headless](./docs/assets/shai-chain.gif)
 
+## Custom Agent (with MCP)
+
+Instead of a single global configuration, you can create custom agent in a separate configuration.
+
+`example.config` contains an example of a custom configuration with an stdio MCP server configured.
+
+Place this file in `~/.config/shai/agents/example.config`, you can then list the agents available with:
+
+```
+shai agent list
+```
+
+you can run shai with this specific agent with the `--agent` option:
+
+```
+shai --agent example
+```
+
 ## shell assistant
 
 shai can also act as a shell assistant in case a command failed and will propose you a fix. This works by injecting command hook while monitoring your terminal output. Your last terminal output along with the last command and error code will be sent for analysis to the llm provider. To start hooking your shell with shai simply type: 
