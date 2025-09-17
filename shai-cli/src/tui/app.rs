@@ -79,7 +79,7 @@ impl App<'_> {
             // Load custom agent config
             let config = AgentConfig::load(agent_name)?;
             
-            println!("\x1b[2magent {} - {} on {}\x1b[0m", agent_name, config.llm_provider.model, config.llm_provider.provider);
+            println!("\x1b[2m░ agent {} - {} on {}\x1b[0m", agent_name, config.llm_provider.model, config.llm_provider.provider);
             
             // Create agent from config
             let agent_builder = AgentBuilder::from_config(config).await?;
@@ -87,7 +87,7 @@ impl App<'_> {
         } else {
             // Use default coder agent
             let (llm, model) = ShaiConfig::get_llm().await?;
-            println!("\x1b[2m{} on {}\x1b[0m", model, llm.provider().name());
+            println!("\x1b[2m░ {} on {}\x1b[0m", model, llm.provider().name());
             
             Box::new(coder(Arc::new(llm), model))
         };

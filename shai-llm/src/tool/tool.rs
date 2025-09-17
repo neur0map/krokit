@@ -24,6 +24,10 @@ pub trait ToolDescription: Send + Sync {
 
     fn parameters_schema(&self) -> serde_json::Value;
     
+    /// Return the group name for this tool (e.g., "builtin", "mcp_ovh")
+    fn group(&self) -> Option<&str> {
+        None
+    }
 }
 
 /// A toolbox is a set of tool

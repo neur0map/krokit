@@ -23,6 +23,7 @@ pub trait McpClient: Send + Sync {
 pub struct WrappedMcpTool {
     pub desc: McpToolDescription,
     pub client: Arc<Mutex<Box<dyn McpClient>>>,
+    pub mcp_name: String,
 }
 
 impl ToolDescription for WrappedMcpTool {
@@ -36,6 +37,10 @@ impl ToolDescription for WrappedMcpTool {
 
     fn parameters_schema(&self) -> serde_json::Value {
         self.desc.parameters_schema.clone()
+    }
+
+    fn group(&self) -> Option<&str> {
+        Some(&self.mcp_name)
     }
 }
 
@@ -68,7 +73,7 @@ impl AnyTool for WrappedMcpTool {
 }
 
 /// Create AnyTool instances from an MCP client
-pub async fn get_mcp_tools(mut client: Box<dyn McpClient>) -> Result<Vec<Box<dyn AnyTool>>, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn get_mcp_tools(mut client: Box<dyn McpClient>, mcp_name: &str) -> Result<Vec<Box<dyn AnyTool>>, Box<dyn std::error::Error + Send + Sync>> {
     // Auto-connect if not already connected
     client.connect().await?;
     
@@ -81,6 +86,7 @@ pub async fn get_mcp_tools(mut client: Box<dyn McpClient>) -> Result<Vec<Box<dyn
             Box::new(WrappedMcpTool {
                 desc,
                 client: client_ref.clone(),
+                mcp_name: mcp_name.to_string(),
             }) as Box<dyn AnyTool>
         })
         .collect();

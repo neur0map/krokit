@@ -63,7 +63,7 @@ impl AppHeadless {
         } else {
             // Use default agent with provided tools
             let (llm_client, model) = ShaiConfig::get_llm().await?;
-            eprintln!("\x1b[2m{} on {}\x1b[0m", model, llm_client.provider().name());
+            eprintln!("\x1b[2m░ {} on {}\x1b[0m", model, llm_client.provider().name());
             
             // Handle tool selection
             let tools = match (tools, remove) {

@@ -164,6 +164,10 @@ fn tool_impl(args: String, input: ItemImpl) -> syn::Result<TokenStream2> {
                 #description.to_string()
             }
 
+            fn group(&self) -> Option<&str> {
+                Some("builtin")
+            }
+
             fn parameters_schema(&self) -> serde_json::Value {
                 use schemars::schema_for;
                 let schema = schema_for!(#param_type);

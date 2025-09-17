@@ -2,7 +2,7 @@ use oauth2::{
     AuthUrl, TokenUrl, ClientId, ClientSecret, RedirectUrl, CsrfToken,
     AuthorizationCode, PkceCodeChallenge, Scope, 
     basic::BasicClient, reqwest::async_http_client, TokenResponse,
-    AuthType,
+    AuthType, url::Url,
 };
 use warp::Filter;
 use std::sync::{Arc, Mutex};
@@ -25,7 +25,10 @@ struct ClientRegistrationResponse {
 }
 
 pub async fn signin_oauth(base_url: &str) -> anyhow::Result<String> {
-    let well_known_url = format!("{}/.well-known/oauth-authorization-server", base_url.trim_end_matches('/'));
+    // Extract the root domain for .well-known endpoint (OAuth standard)
+    let url = Url::parse(base_url)?;
+    let root_url = format!("{}://{}", url.scheme(), url.host_str().unwrap_or(""));
+    let well_known_url = format!("{}/.well-known/oauth-authorization-server", root_url);
     
     let client = reqwest::Client::new();
     let oauth_metadata: serde_json::Value = client

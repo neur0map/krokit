@@ -108,8 +108,8 @@ impl AgentConfig {
     }
 
     /// Save the agent config to file
-    pub fn save(&self, agent_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let config_path = Self::agent_config_path(agent_name)?;
+    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let config_path = Self::agent_config_path(&self.name)?;
         let content = serde_json::to_string_pretty(self)?;
         std::fs::write(&config_path, content)?;
         Ok(())
