@@ -42,6 +42,8 @@ use shell::rc::{ShellType, get_shell};
 #[cfg(unix)]
 use fc::client::ShaiSessionClient;
 
+use crate::headless::tools::list_all_tools;
+
 #[derive(Parser)]
 #[command(name = "shai")]
 #[command(about = "SHAI - Smart terminal wrapper with advanced features")]
@@ -186,9 +188,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 messages.push(cli.args.join(" "));
             }
             
+            // Handle --list-tools flag
+            if cli.list_tools {
+                list_all_tools();
+                return Ok(());
+            }
+
+
             if !messages.is_empty() || cli.list_tools {
                 // Route to fix command with combined messages and global options
-                handle_fix(messages, cli.list_tools, cli.tools, cli.remove, cli.trace).await?;
+                handle_fix(messages, cli.tools, cli.remove, cli.trace, cli.agent).await?;
             } else {
                 // No input, show TUI
                 handle_main(cli.agent).await?;
@@ -241,10 +250,10 @@ async fn ensure_config() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn handle_fix(
     prompt: Vec<String>, 
-    list_tools: bool, 
     tools: Option<String>, 
     remove: Option<String>,
-    trace: bool
+    trace: bool,
+    agent_name: Option<String>
 ) -> Result<(), Box<dyn std::error::Error>> {
     let initial_trace: Vec<ChatMessage> = prompt.into_iter()
         .map(|p| ChatMessage::User { 
@@ -253,7 +262,7 @@ async fn handle_fix(
         })
         .collect();
     
-    AppHeadless::new().run(initial_trace, list_tools, tools, remove, trace).await
+    AppHeadless::new().run(initial_trace, tools, remove, trace, agent_name).await
 }
 
 #[cfg(unix)]

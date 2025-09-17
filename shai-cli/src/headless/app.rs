@@ -5,6 +5,7 @@ use crate::headless::tools::ToolConfig;
 use super::tools::{ToolName, list_all_tools, parse_tools_list};
 use shai_core::agent::{Agent, AgentBuilder, AgentError, AgentResult, Brain, LoggingConfig, StdoutEventManager};
 use shai_core::config::config::ShaiConfig;
+use shai_core::config::agent::AgentConfig;
 use shai_core::runners::coder::coder::CoderBrain;
 use shai_core::runners::searcher::searcher::SearcherBrain;
 use shai_llm::{ChatMessage, ChatMessageContent, LlmClient};
@@ -27,10 +28,10 @@ impl AppHeadless {
 
     pub async fn run(&self,
         initial_trace: Vec<ChatMessage>,
-        list_tools: bool, 
         tools: Option<String>, 
         remove: Option<String>,
-        trace: bool
+        trace: bool,
+        agent_name: Option<String>
     ) -> Result<(), Box<dyn std::error::Error>> {   
         // Configure internal debug logging to file
         /*
@@ -40,50 +41,55 @@ impl AppHeadless {
             .init();
         */
 
-        // Handle --list-tools flag
-        if list_tools {
-            list_all_tools();
-            return Ok(());
-        }
-    
-        let (llm_client, model) = ShaiConfig::get_llm().await?;
-        eprintln!("\x1b[2m{} on {}\x1b[0m", model, llm_client.provider().name());
-    
         // Validate that we have some input
         if initial_trace.is_empty() {
             eprintln!("Error: Please provide a prompt for the coder agent");
             eprintln!("Usage: shai \"your prompt here\" or using pipe echo \"your prompt here\" | shai");
             return Ok(());
         }
-    
-        // Handle tool selection
-        let tools = match (tools, remove) {
-            (Some(tools_str), _) => {
-                let selected_tools = parse_tools_list(&tools_str)?;
-                ToolConfig::new().add_tools(selected_tools)
-            }
-            (None, Some(remove_str)) => {
-                let tools_to_remove = parse_tools_list(&remove_str)?;
-                ToolConfig::new().remove_tools(tools_to_remove)
-            }
-            (None, None) => ToolConfig::new(),
+
+        let agent = if let Some(agent_name) = agent_name {
+            // Use custom agent from config
+            let config = AgentConfig::load(&agent_name)
+                .map_err(|e| format!("Failed to load agent '{}': {}", agent_name, e))?;
+            
+            let agent_builder = AgentBuilder::from_config(config).await
+                .map_err(|e| format!("Failed to create agent from config: {}", e))?;
+            
+            agent_builder
+                .with_traces(initial_trace)
+                .sudo()
+                .build()
+        } else {
+            // Use default agent with provided tools
+            let (llm_client, model) = ShaiConfig::get_llm().await?;
+            eprintln!("\x1b[2m{} on {}\x1b[0m", model, llm_client.provider().name());
+            
+            // Handle tool selection
+            let tools = match (tools, remove) {
+                (Some(tools_str), _) => {
+                    let selected_tools = parse_tools_list(&tools_str)?;
+                    ToolConfig::new().add_tools(selected_tools)
+                }
+                (None, Some(remove_str)) => {
+                    let tools_to_remove = parse_tools_list(&remove_str)?;
+                    ToolConfig::new().remove_tools(tools_to_remove)
+                }
+                (None, None) => ToolConfig::new(),
+            };
+            
+            let toolbox = tools.build_toolbox();
+            let brain: Box<dyn Brain> = match self.kind {
+                AgentKind::Coder => Box::new(CoderBrain::new(Arc::new(llm_client), model)),
+                AgentKind::Searcher => Box::new(SearcherBrain::new(Arc::new(llm_client), model)),
+            };
+
+            AgentBuilder::new(brain)
+                .with_traces(initial_trace)
+                .tools(toolbox)
+                .sudo()
+                .build()
         };
-
-        // Run the agent
-        let model = llm_client.default_model().await
-            .map_err(|e| format!("Failed to get default model: {}", e))?;
-
-        let toolbox = tools.build_toolbox();
-        let brain: Box<dyn Brain> = match self.kind {
-            AgentKind::Coder => Box::new(CoderBrain::new(Arc::new(llm_client), model)),
-            AgentKind::Searcher => Box::new(SearcherBrain::new(Arc::new(llm_client), model)),
-        };
-
-        let agent = AgentBuilder::new(brain)
-            .with_traces(initial_trace)
-            .tools(toolbox)
-            .sudo()
-            .build();
 
         let result = agent
             .with_event_handler(StdoutEventManager::new())

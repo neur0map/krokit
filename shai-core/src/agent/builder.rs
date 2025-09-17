@@ -129,6 +129,11 @@ impl AgentBuilder {
         };
 
         for tool_name in builtin_tools_to_add {
+            // Skip if tool is in builtin excluded list
+            if config.tools.builtin_excluded.contains(&tool_name.to_string()) {
+                continue;
+            }
+            
             match tool_name {
                 "bash" => tools.push(Box::new(BashTool::new())),
                 "edit" => tools.push(Box::new(EditTool::new(fs_log.clone()))),
@@ -154,15 +159,18 @@ impl AgentBuilder {
             
             // Check if we should add all tools or filter by enabled_tools
             if mcp_tool_config.enabled_tools.contains(&"*".to_string()) {
-                // Add all tools from this MCP client
-                for tool in all_mcp_tools {
-                    tools.push(tool);
-                }
-            } else {
-                // Filter and add only enabled tools
+                // Add all tools from this MCP client (except excluded ones)
                 for tool in all_mcp_tools {
                     let tool_name = tool.name();
-                    if mcp_tool_config.enabled_tools.contains(&tool_name) {
+                    if !mcp_tool_config.excluded_tools.contains(&tool_name) {
+                        tools.push(tool);
+                    }
+                }
+            } else {
+                // Filter and add only enabled tools (except excluded ones)
+                for tool in all_mcp_tools {
+                    let tool_name = tool.name();
+                    if mcp_tool_config.enabled_tools.contains(&tool_name) && !mcp_tool_config.excluded_tools.contains(&tool_name) {
                         tools.push(tool);
                     }
                 }

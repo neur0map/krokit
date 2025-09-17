@@ -17,12 +17,16 @@ pub struct McpToolConfig {
     pub config: McpConfig,
     #[serde(default = "default_enabled_tools")]
     pub enabled_tools: Vec<String>,
+    #[serde(default)]
+    pub excluded_tools: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentTools {
     #[serde(default)]
     pub builtin: Vec<String>,
+    #[serde(default)]
+    pub builtin_excluded: Vec<String>,
     #[serde(default)]
     pub mcp: HashMap<String, McpToolConfig>,
 }
@@ -34,11 +38,16 @@ pub struct AgentConfig {
     pub llm_provider: AgentProviderConfig,
     #[serde(default)]
     pub tools: AgentTools,
+    #[serde(default = "default_system_prompt")]
     pub system_prompt: String,
     #[serde(default = "default_max_tokens")]
     pub max_tokens: u32,
     #[serde(default = "default_temperature")]
     pub temperature: f32,
+}
+
+fn default_system_prompt() -> String {
+    "{{CODER_BASE_PROMPT}}".to_string()
 }
 
 fn default_max_tokens() -> u32 {
@@ -57,6 +66,7 @@ impl Default for AgentTools {
     fn default() -> Self {
         Self {
             builtin: vec!["*".to_string()],
+            builtin_excluded: Vec::new(),
             mcp: HashMap::new(),
         }
     }
