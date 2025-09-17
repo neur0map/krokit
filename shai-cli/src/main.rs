@@ -66,9 +66,6 @@ struct Cli {
     /// Remove specific tools from the default set (comma-separated)
     #[arg(long)]
     remove: Option<String>,
-    /// Use a specific custom agent
-    #[arg(long)]
-    agent: Option<String>,
     /// Auto-fix mode: if no subcommand provided, these args go to fix
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     args: Vec<String>,
@@ -78,13 +75,9 @@ struct Cli {
 enum AgentAction {
     /// List all available agents
     List,
-    /// Start SHAI with a specific agent configuration
-    Run {
-        /// Name of the agent to run
-        agent_name: String,
-        /// Goal or initial prompt for the agent (optional)
-        goal: Option<String>,
-    },
+    #[command(external_subcommand)]
+    /// Run a specific agent by name
+    Agent(Vec<String>),
 }
 
 #[derive(Subcommand)]
@@ -197,10 +190,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if !messages.is_empty() || cli.list_tools {
                 // Route to fix command with combined messages and global options
-                handle_fix(messages, cli.tools, cli.remove, cli.trace, cli.agent).await?;
+                handle_fix(messages, cli.tools, cli.remove, cli.trace, None).await?;
             } else {
                 // No input, show TUI
-                handle_main(cli.agent).await?;
+                handle_main(None).await?;
             }
         }
     }
@@ -447,30 +440,54 @@ pub async fn handle_postcmd(exit_code: i32, command: String) -> Result<(), Box<d
 }
 
 async fn handle_agent_command(action: AgentAction) -> Result<(), Box<dyn std::error::Error>> {
-    let agents = AgentConfig::list_agents()?;
     match action {
         AgentAction::List => {
+            let agents = AgentConfig::list_agents()?;
             if agents.is_empty() {
                 println!("No custom agents found.");
                 println!("Create agent configs in ~/.config/shai/agents/");
             } else {
                 println!("Available agents:");
+                
+                // Find the longest agent name for alignment
+                let max_name_len = agents.iter().map(|name| name.len()).max().unwrap_or(0);
+                
                 for agent in agents {
                     match AgentConfig::load(&agent) {
                         Ok(config) => {
-                            println!("  {} - {}", agent, config.description);
+                            println!("  \x1b[1m{:<width$}\x1b[0m \x1b[2m{}\x1b[0m", 
+                                agent, 
+                                config.description,
+                                width = max_name_len
+                            );
                         }
                         Err(_) => {
-                            println!("  {} - (config error)", agent);
+                            println!("  \x1b[1m{:<width$}\x1b[0m \x1b[2m(config error)\x1b[0m", 
+                                agent,
+                                width = max_name_len
+                            );
                         }
                     }
                 }
             }
         }
-        AgentAction::Run { agent_name, goal } => {
-            println!("Running agent '{}' is not yet implemented", agent_name);
-            if let Some(goal) = goal {
-                println!("Goal: {}", goal);
+        AgentAction::Agent(args) => {
+            if args.is_empty() {
+                eprintln!("Error: Please specify an agent name");
+                eprintln!("Usage: shai agent <agent_name> [prompt]");
+                return Ok(());
+            }
+            
+            let agent_name = &args[0];
+            let prompt_args: Vec<String> = args.iter().skip(1).cloned().collect();
+            
+            if prompt_args.is_empty() {
+                // No prompt provided, start TUI mode with the agent
+                handle_main(Some(agent_name.clone())).await?;
+            } else {
+                // Prompt provided, run in headless mode
+                let prompt = prompt_args.join(" ");
+                handle_fix(vec![prompt], None, None, false, Some(agent_name.clone())).await?;
             }
         }
     }

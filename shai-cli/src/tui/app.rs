@@ -79,8 +79,7 @@ impl App<'_> {
             // Load custom agent config
             let config = AgentConfig::load(agent_name)?;
             
-            println!("\x1b[2mLoading custom agent '{}' - {}\x1b[0m", agent_name, config.description);
-            println!("\x1b[2m{} on {}\x1b[0m", config.llm_provider.model, config.llm_provider.provider);
+            println!("\x1b[2magent {} - {} on {}\x1b[0m", agent_name, config.llm_provider.model, config.llm_provider.provider);
             
             // Create agent from config
             let agent_builder = AgentBuilder::from_config(config).await?;
