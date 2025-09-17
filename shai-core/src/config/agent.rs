@@ -91,7 +91,7 @@ impl AgentConfig {
     /// Get the path for a specific agent config file
     pub fn agent_config_path(agent_name: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
         let agents_dir = Self::agents_dir()?;
-        Ok(agents_dir.join(format!("{}.json", agent_name)))
+        Ok(agents_dir.join(format!("{}.config", agent_name)))
     }
 
     /// Load an agent config from file
@@ -126,7 +126,7 @@ impl AgentConfig {
                 let path = entry.path();
                 
                 if let Some(extension) = path.extension() {
-                    if extension == "json" {
+                    if extension == "config" {
                         if let Some(filename) = path.file_stem() {
                             if let Some(agent_name) = filename.to_str() {
                                 agents.push(agent_name.to_string());
