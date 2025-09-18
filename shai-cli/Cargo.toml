@@ -28,6 +28,7 @@ ringbuffer = "0.16"
 cli-clipboard = "0.4"
 textwrap = "0.16"
 
+
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
