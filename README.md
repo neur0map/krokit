@@ -71,10 +71,10 @@ Place this file in `~/.config/shai/agents/example.config`, you can then list the
 shai agent list
 ```
 
-you can run shai with this specific agent with the `--agent` option:
+you can run shai with this specific agent with the `agent` subcommand:
 
 ```
-shai --agent example
+shai example
 ```
 
 ## shell assistant
@@ -111,5 +111,5 @@ cargo build --release
 
 OVHCloud provides compatible LLM endpoints for using shai with tools. Start by creating a [_Public Cloud_ project in your OVHCloud account](https://www.ovh.com/manager/#/public-cloud), then head to _AI Endpoints_ and retreive your API key. After setting it in shai, you can:
 
-- choose [one of the models with function calling feature](https://endpoints.ai.cloud.ovh.net/catalog) (e.g., [Qwen3-32B](https://endpoints.ai.cloud.ovh.net/models/qwen-3-32b), [Mistral-​Small-​3.2-​24B-​Instruct-​2506](https://endpoints.ai.cloud.ovh.net/models/mistral-small-3-2-24b-instruct-2506)) for best performance ;
+- choose [one of the models with function calling feature](https://endpoints.ai.cloud.ovh.net/catalog) (e.g., [gpt-oss-120b](https://endpoints.ai.cloud.ovh.net/models/gpt-oss-120b), [gpt-oss-20b](https://endpoints.ai.cloud.ovh.net/models/gpt-oss-20b), [Mistral-​Small-​3.2-​24B-​Instruct-​2506](https://endpoints.ai.cloud.ovh.net/models/mistral-small-3-2-24b-instruct-2506)) for best performance ;
 - choose any other model forcing structured output (`/set so` option).

@@ -114,34 +114,38 @@ impl PrettyFormatter {
     }
 
     /// Format a thinking message
-   fn format_thinking(&self, thought: &Result<ChatMessage, AgentError>) -> Option<String> {
-   match thought {
-       Ok(ChatMessage::Assistant { content, reasoning_content, .. }) => {
-           let content_empty = content.as_ref().map_or(true, |c| matches!(c, ChatMessageContent::Text(t) if t.trim().is_empty()));
-           let reasoning_empty = reasoning_content.as_deref().map_or(true, |r| r.trim().is_empty());
-           if content_empty && reasoning_empty { return None; }
-           
-           let parts: Vec<_> = [
-               reasoning_content.as_deref()
-                   .filter(|r| !r.trim().is_empty())
-                   .map(|r| format!("\x1b[2m✻ {}\x1b[0m", r)),
-               content.as_ref().and_then(|c| match c {
-                   ChatMessageContent::Text(text) if !text.trim().is_empty() => 
-                       Some(format!("● {}", self.skin.term_text(text))),
-                   _ => None,
-               }),
-           ].into_iter().flatten().collect();
-           (!parts.is_empty()).then(|| parts.join("\n"))
-       }
-       Err(err) => {
-           let mut error_skin = self.skin.clone();
-           error_skin.paragraph.set_fg(rgb(255, 100, 100));
-           error_skin.bold.set_fg(rgb(255, 150, 150));
-           Some(error_skin.text(&format!("● **Error:** {}", err), None).to_string())
-       }
-       _ => None,
-   }
-}
+    fn format_thinking(&self, thought: &Result<ChatMessage, AgentError>) -> Option<String> {
+        match thought {
+            Ok(ChatMessage::Assistant { content, reasoning_content, .. }) => {
+                let content_empty = content.as_ref().map_or(true, |c| matches!(c, ChatMessageContent::Text(t) if t.trim().is_empty()));
+                let reasoning_empty = reasoning_content.as_deref().map_or(true, |r| r.trim().is_empty());
+                if content_empty && reasoning_empty { return None; }
+                
+                let parts: Vec<_> = [
+                    reasoning_content.as_deref()
+                        .filter(|r| !r.trim().is_empty())
+                        .map(|r| {
+                            let mut reasoning_skin = self.skin.clone();
+                            reasoning_skin.paragraph.set_fg(rgb(120, 120, 120)); // Dim text
+                            format!("\x1b[2m✻ {}\x1b[0m", reasoning_skin.term_text(r).to_string())
+                        }),
+                    content.as_ref().and_then(|c| match c {
+                        ChatMessageContent::Text(text) if !text.trim().is_empty() => 
+                            Some(format!("● {}\x1b[0m", self.skin.term_text(text))),
+                        _ => None,
+                    }),
+                ].into_iter().flatten().collect();
+                (!parts.is_empty()).then(|| parts.join("\n"))
+            }
+            Err(err) => {
+                let mut error_skin = self.skin.clone();
+                error_skin.paragraph.set_fg(rgb(255, 100, 100));
+                error_skin.bold.set_fg(rgb(255, 150, 150));
+                Some(error_skin.text(&format!("● **Error:** {}", err), None).to_string())
+            }
+            _ => None,
+        }
+    }
 
     /// Format tool started
     pub fn format_tool_started(&self, call: &ToolCall) -> String {
@@ -202,20 +206,22 @@ impl PrettyFormatter {
                         output.push_str(&format!("  ⎿ \x1b[1m{}\x1b[0m lines, \x1b[1m{}\x1b[0m chars", lines, chars));
                     }
                     
-                    // Show first N lines for user display
-                    let preview_lines: Vec<&str> = tool_output.lines().take(self.max_preview_lines).collect();
-                    if !preview_lines.is_empty() {
-                        let mut markdown_content = String::new();
-                        markdown_content.push_str("\n");
-                        for line in preview_lines {
-                            markdown_content.push_str(&format!("      {}\n", line));
+                    // Show first N lines for user display only for specific tools
+                    if matches!(call.tool_name.as_str(), "ls" | "bash" | "edit" | "multiedit" | "find") {
+                        let preview_lines: Vec<&str> = tool_output.lines().take(self.max_preview_lines).collect();
+                        if !preview_lines.is_empty() {
+                            let mut markdown_content = String::new();
+                            markdown_content.push_str("\n");
+                            for line in preview_lines {
+                                markdown_content.push_str(&format!("      {}\n", line));
+                            }
+                            if lines > self.max_preview_lines {
+                                markdown_content.push_str(&format!("      ... {} more lines\n", lines - self.max_preview_lines));
+                            }
+                            
+                            // Render markdown content and append to output
+                            output.push_str(&self.skin.term_text(&markdown_content).to_string());
                         }
-                        if lines > self.max_preview_lines {
-                            markdown_content.push_str(&format!("      ... {} more lines\n", lines - self.max_preview_lines));
-                        }
-                        
-                        // Render markdown content and append to output
-                        output.push_str(&self.skin.term_text(&markdown_content).to_string());
                     }
                 }
             },
