@@ -137,10 +137,8 @@ impl App<'_> {
         // Format and display event
         if let Some(formatted) = self.formatter.format_event(&event) {
             if let Some(ref mut terminal) = self.terminal {
-                let width = std::cmp::max(24, terminal.size().unwrap().width as usize-5);
                 let wrapped = formatted.into_text().unwrap();
                 let line_count = wrapped.lines.iter().len() as u16;
-
                 terminal.clear()?; // this is to avoid visual artifact
                 terminal.insert_before(line_count, |buf| {
                     wrapped.render(buf.area, buf);
