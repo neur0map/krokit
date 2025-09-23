@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use serde::{Serialize, Deserialize, de::DeserializeOwned};
 use schemars::JsonSchema;
 use shai_llm::{ChatCompletionFunction, ChatCompletionTool, ChatCompletionToolType, ToolBox, ToolDescription};
+use tokio_util::sync::CancellationToken;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
@@ -108,17 +109,17 @@ pub trait Tool: ToolDescription + Send + Sync {
 
     /// execute the tool.
     /// parameters are specific for each tool
-    async fn execute(&self, parameters: Self::Params) -> ToolResult;
+    async fn execute(&self, params: Self::Params, cancel_token: Option<CancellationToken>) -> ToolResult;
 
     /// execute the tool in preview mode - shows what would happen without making changes
     /// Default implementation returns None (no preview available)
-    async fn execute_preview(&self, _parameters: Self::Params) -> Option<ToolResult> {
+    async fn execute_preview(&self, params: Self::Params) -> Option<ToolResult> {
         None
     }
 
     /// execute the tool.
     /// params are jsno-serialized then deserialized in tool specific parameter.
-    async fn execute_json(&self, params: serde_json::Value) -> ToolResult {
+    async fn execute_json(&self, params: serde_json::Value, cancel_token: Option<CancellationToken>) -> ToolResult {
         // Deserialize JSON directly to typed parameters
         let typed_params: <Self>::Params = match serde_json::from_value(params) {
             Ok(p) => p,
@@ -126,7 +127,7 @@ pub trait Tool: ToolDescription + Send + Sync {
         };
         
         // Call the typed execute method directly
-        self.execute(typed_params).await
+        self.execute(typed_params, cancel_token).await
     }
 }
 
@@ -135,7 +136,7 @@ pub trait Tool: ToolDescription + Send + Sync {
 pub trait AnyTool: ToolDescription + Send + Sync {
     fn capabilities(&self) -> &[ToolCapability];
     
-    async fn execute_json(&self, params: serde_json::Value) -> ToolResult;
+    async fn execute_json(&self, params: serde_json::Value, cancel_token: Option<CancellationToken>) -> ToolResult;
     async fn execute_preview_json(&self, params: serde_json::Value) -> Option<ToolResult>;
 }
 
@@ -149,18 +150,16 @@ where
         <T as Tool>::capabilities(self)
     }
     
-    async fn execute_json(&self, params: serde_json::Value) -> ToolResult {
-        self.execute_json(params).await
+    async fn execute_json(&self, params: serde_json::Value, cancel_token: Option<CancellationToken>) -> ToolResult {
+        self.execute_json(params, cancel_token).await
     }
     
     async fn execute_preview_json(&self, params: serde_json::Value) -> Option<ToolResult> {
-        // Deserialize JSON directly to typed parameters
         let typed_params: <T as Tool>::Params = match serde_json::from_value(params) {
             Ok(p) => p,
-            Err(_) => return None // Failed to deserialize, no preview available
+            Err(_) => return None
         };
         
-        // Call the typed execute_preview method
         self.execute_preview(typed_params).await
     }
 }

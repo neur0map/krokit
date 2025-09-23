@@ -1,6 +1,7 @@
 use std::io::{self, stdout, Write};
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::cursor::MoveTo;
+use crossterm::event::{self, EnableFocusChange, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::{execute, ExecutableCommand};
 use crossterm::event::{EnableMouseCapture, DisableMouseCapture};
 use futures::StreamExt;
@@ -23,9 +24,6 @@ pub struct AlternateScreenPermissionModal<'a> {
 
 impl AlternateScreenPermissionModal<'_> {
     pub fn new(widget: &PermissionWidget) -> io::Result<Self> {
-        // Enter alternate screen and enable mouse capture
-        execute!(stdout(), EnterAlternateScreen, EnableMouseCapture)?;
-        
         Ok(Self {
             widget: PermissionWidget::new(
                 widget.request_id.clone(),
@@ -40,13 +38,13 @@ impl AlternateScreenPermissionModal<'_> {
 
 
     pub async fn run(&mut self) -> io::Result<PermissionModalAction> {
-        // Enter alternate screen (don't touch raw mode, main TUI handles it)
-        execute!(stdout(), EnterAlternateScreen)?;
+        // Enter alternate screen and enable mouse capture
+        execute!(stdout(), EnterAlternateScreen, EnableMouseCapture)?;
 
         let result = self.run_modal().await;
 
-        // Always clean up - only leave alternate screen
-        let _ = execute!(stdout(), LeaveAlternateScreen);
+        // Always clean up - leave alternate screen and disable mouse capture
+        let _ = execute!(stdout(), LeaveAlternateScreen, DisableMouseCapture);
         let _ = stdout().flush();
         
         // Small delay to ensure terminal state is properly restored
@@ -58,7 +56,7 @@ impl AlternateScreenPermissionModal<'_> {
     async fn run_modal(&mut self) -> io::Result<PermissionModalAction> {
         let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
         let mut reader = event::EventStream::new();
-
+        
         loop {
             terminal.draw(|frame| {
                 let area = frame.area();
@@ -95,9 +93,6 @@ impl AlternateScreenPermissionModal<'_> {
             }
         }
     }
-
-
-
 }
 
 impl Drop for AlternateScreenPermissionModal<'_> {

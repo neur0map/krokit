@@ -183,7 +183,7 @@ impl AgentCore {
             if can_run {
                 // Execute tool with cancellation support
                 tokio::select! {
-                    result = tool.execute_json(call.parameters.clone()) => result,
+                    result = tool.execute_json(call.parameters.clone(), Some(cancel_token.clone())) => result,
                     _ = cancel_token.cancelled() => {
                         ToolResult::error("tool call was cancelled by the user".to_string())
                     }

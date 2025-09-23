@@ -4,7 +4,7 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{
-    parse_macro_input, FnArg, ItemImpl, Pat, PatType,
+    parse_macro_input, FnArg, ItemImpl, PatType,
 };
 
 #[proc_macro_attribute]
@@ -82,20 +82,30 @@ fn tool_impl(args: String, input: ItemImpl) -> syn::Result<TokenStream2> {
     let mut execute_method = None;
     let mut execute_preview_method = None;
     let mut param_type = None;
+    let mut has_cancel_token = false;
 
     for item in &input.items {
         if let syn::ImplItem::Fn(method) = item {
             if method.sig.ident == "execute" {
                 execute_method = Some(method);
                 
-                // Extract parameter type from function signature
+                // Extract parameter type by position: &self, params, [optional cancel_token]
+                let mut param_index = 0;
                 for input in &method.sig.inputs {
-                    if let FnArg::Typed(PatType { pat, ty, .. }) = input {
-                        if let Pat::Ident(ident) = pat.as_ref() {
-                            if ident.ident == "params" {
+                    match input {
+                        FnArg::Receiver(_) => {
+                            // Skip &self
+                            continue;
+                        }
+                        FnArg::Typed(PatType { ty, .. }) => {
+                            if param_index == 0 {
+                                // First non-self parameter is params
                                 param_type = Some(ty.as_ref());
-                                break;
+                            } else if param_index == 1 {
+                                // Second non-self parameter is cancel_token
+                                has_cancel_token = true;
                             }
+                            param_index += 1;
                         }
                     }
                 }
@@ -149,6 +159,21 @@ fn tool_impl(args: String, input: ItemImpl) -> syn::Result<TokenStream2> {
         }
     } else {
         quote! {}
+    };
+
+    // Generate the execute implementation based on whether user method has cancel_token
+    let execute_impl = if has_cancel_token {
+        quote! {
+            async fn execute(&self, parameters: Self::Params, cancel_token: Option<tokio_util::sync::CancellationToken>) -> #crate_name::tools::ToolResult {
+                <Self>::execute(self, parameters, cancel_token).await
+            }
+        }
+    } else {
+        quote! {
+            async fn execute(&self, parameters: Self::Params, cancel_token: Option<tokio_util::sync::CancellationToken>) -> #crate_name::tools::ToolResult {
+                <Self>::execute(self, parameters).await
+            }
+        }
     };
 
     let expanded = quote! {
@@ -244,10 +269,7 @@ fn tool_impl(args: String, input: ItemImpl) -> syn::Result<TokenStream2> {
                 #capabilities_tokens
             }
 
-            async fn execute(&self, parameters: Self::Params) -> #crate_name::tools::ToolResult {
-                // Call the user-defined execute method with 'params' parameter name
-                <Self>::execute(self, parameters).await
-            }
+            #execute_impl
 
             #execute_preview_impl
         }
