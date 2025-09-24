@@ -171,7 +171,7 @@ todoStatus: This is the current status of the todo list
 "#;
 
 pub async fn get_todo_read(todo_tool: &Arc<dyn AnyTool>) -> String {
-    let todo = todo_tool.execute_json(serde_json::json!({})).await;
+    let todo = todo_tool.execute_json(serde_json::json!({}), None).await;
     if let ToolResult::Success { output, metadata } = todo {
         TODO_STATUS.to_string()
         .replace("{{TODO_LIST}}", &output)

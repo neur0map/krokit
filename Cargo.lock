@@ -3057,6 +3057,7 @@ dependencies = [
  "dirs",
  "fs",
  "futures 0.3.31",
+ "libc",
  "oauth2 4.4.2",
  "openai_dive",
  "paste",

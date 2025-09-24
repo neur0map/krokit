@@ -50,7 +50,7 @@ impl AnyTool for WrappedMcpTool {
         &[ToolCapability::Network]
     }
 
-    async fn execute_json(&self, params: serde_json::Value) -> ToolResult {
+    async fn execute_json(&self, params: serde_json::Value, cancel_token: Option<tokio_util::sync::CancellationToken>) -> ToolResult {
         let tool_call = ToolCall {
             tool_call_id: format!("mcp-{}", uuid::Uuid::new_v4()),
             tool_name: self.desc.name.clone(),

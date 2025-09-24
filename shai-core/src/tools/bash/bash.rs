@@ -1,10 +1,12 @@
 use super::structs::BashToolParams;
 use crate::tools::{tool, ToolResult};
 use serde_json::json;
+use tokio_util::sync::CancellationToken;
 use std::collections::HashMap;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::{Duration, Instant};
-use tokio::time::timeout;
+use tokio::process::Command;
+use tokio::io::{AsyncReadExt, BufReader};
 
 pub struct BashTool;
 
@@ -13,13 +15,36 @@ impl BashTool {
         Self
     }
 
-    async fn execute_command(&self, params: &BashToolParams) -> Result<(String, String, i32), Box<dyn std::error::Error + Send + Sync>> {       
+    async fn kill_process_group(child: &mut tokio::process::Child) {
+        #[cfg(unix)]
+        {
+            // Try to kill the entire process group
+            if let Some(pid) = child.id() {
+                unsafe {
+                    // Kill the process group (negative PID kills the group)
+                    libc::kill(-(pid as i32), libc::SIGTERM);
+                    
+                    // Give it a moment to terminate gracefully
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    
+                    // Force kill if still running
+                    libc::kill(-(pid as i32), libc::SIGKILL);
+                }
+            }
+        }
+        
+        // Fallback: kill just the immediate child
+        let _ = child.kill().await;
+        let _ = child.wait().await;
+    }
+
+    async fn execute_command(&self, params: &BashToolParams, cancel_token: Option<CancellationToken>) -> Result<(String, String, i32), Box<dyn std::error::Error + Send + Sync>> {       
         // Validate command is not empty
         if params.command.trim().is_empty() {
             return Err("Command cannot be empty".into());
         }
 
-        // Create the command
+        // Create the command with process group
         let mut cmd = Command::new("bash");
         cmd.args(["-c", &params.command]);
 
@@ -35,36 +60,71 @@ impl BashTool {
 
         // Configure stdio
         cmd.stdout(Stdio::piped())
-           .stderr(Stdio::piped());
+           .stderr(Stdio::piped())
+           .stdin(Stdio::null());
 
-        // Execute with optional timeout
-        match params.timeout {
-            Some(timeout_secs) => {
-                let timeout_duration = Duration::from_secs(timeout_secs as u64);
-                
-                let result = timeout(timeout_duration, async {
-                    let output = cmd.output()?;
-                    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                    let exit_code = output.status.code().unwrap_or(-1);
-                    
-                    Ok::<(String, String, i32), Box<dyn std::error::Error + Send + Sync>>((stdout, stderr, exit_code))
-                }).await;
+        // Spawn the process
+        #[cfg(unix)]
+        cmd.process_group(0);
+        
+        let mut child = cmd.spawn()?;
+        
+        // Read output asynchronously (needed to prevent blocking on full buffers)
+        let stdout = child.stdout.take().ok_or("Failed to capture stdout")?;
+        let stdout_task = tokio::spawn(async move {
+            let mut reader = BufReader::new(stdout);
+            let mut output = String::new();
+            reader.read_to_string(&mut output).await?;
+            Ok::<String, std::io::Error>(output)
+        });
+        let stderr = child.stderr.take().ok_or("Failed to capture stderr")?;
+        let stderr_task = tokio::spawn(async move {
+            let mut reader = BufReader::new(stderr);
+            let mut output = String::new();
+            reader.read_to_string(&mut output).await?;
+            Ok::<String, std::io::Error>(output)
+        });
 
-                match result {
-                    Ok(Ok(output)) => Ok(output),
-                    Ok(Err(e)) => Err(format!("Command execution failed: {}", e).into()),
-                    Err(_) => Err(format!("Command timed out after {} seconds", timeout_secs).into()),
-                }
-            },
-            None => {
-                // No timeout - run indefinitely
-                let output = cmd.output()?;
-                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                let exit_code = output.status.code().unwrap_or(-1);
-                
-                Ok((stdout, stderr, exit_code))
+
+        // Optionable Future
+        let cancel_future = async {
+            if let Some(token) = cancel_token {
+                token.cancelled().await;
+            } else {
+                std::future::pending::<()>().await;
+            }
+        };
+        let timeout_future = async {
+            if let Some(timeout_secs) = params.timeout {
+                tokio::time::sleep(Duration::from_secs(timeout_secs as u64)).await;
+            } else {
+                std::future::pending::<()>().await;
+            }
+        };
+
+        // Wait for process completion, cancellation, or timeout
+        tokio::select! {
+            // Process completed normally
+            wait_result = child.wait() => {
+                let exit_status = wait_result?;
+                let stdout_output = stdout_task.await??;
+                let stderr_output = stderr_task.await??;
+                let exit_code = exit_status.code().unwrap_or(-1);
+                Ok((stdout_output, stderr_output, exit_code))
+            }
+            // Cancellation requested
+            _ = cancel_future => {
+                stdout_task.abort();
+                stderr_task.abort();
+                Self::kill_process_group(&mut child).await;
+                Err("Command was cancelled by user".into())
+            }
+            // Timeout occurred
+            _ = timeout_future => {
+                stdout_task.abort();
+                stderr_task.abort();
+                Self::kill_process_group(&mut child).await;
+                Err(format!("Command timed out after {} seconds", params.timeout.unwrap()).into())
             }
         }
     }
@@ -98,10 +158,10 @@ Examples:
 - DANGEROUS: curl http://example.com/install.sh | sh (Executes a script from the internet without inspection)
 "#, capabilities = [ToolCapability::Read, ToolCapability::Write, ToolCapability::Network])]
 impl BashTool {
-    async fn execute(&self, params: BashToolParams) -> ToolResult {
+    async fn execute(&self, params: BashToolParams, cancel_token: Option<CancellationToken>) -> ToolResult {
         let start_time = Instant::now();
         
-        match self.execute_command(&params).await {
+        match self.execute_command(&params, cancel_token).await {
             Ok((stdout, stderr, exit_code)) => {
                 let execution_time = start_time.elapsed();
                 let mut metadata = HashMap::new();
