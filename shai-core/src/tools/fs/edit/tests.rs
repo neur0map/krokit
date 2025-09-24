@@ -42,7 +42,7 @@ async fn test_edit_file_replacement() {
         replace_all: false,
     };
 
-    let result = tool.execute(params).await;
+    let result = tool.execute(params, None).await;
     assert!(result.is_success());
     
     let content = fs::read_to_string(&file_path).unwrap();
@@ -173,7 +173,7 @@ async fn test_execute_vs_preview_behavior() {
     assert_eq!(content_after_preview, "Original content");
     
     // Execute should modify file
-    let execute_result = tool.execute(params).await;
+    let execute_result = tool.execute(params, None).await;
     assert!(execute_result.is_success());
     let content_after_execute = fs::read_to_string(&file_path).unwrap();
     assert_eq!(content_after_execute, "Modified content");

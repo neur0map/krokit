@@ -40,7 +40,7 @@ mod integration_tests {
             long_format: false,
             max_depth: None,
             max_files: None,
-        }).await;
+        }, None).await;
         assert!(ls_result.is_success());
         
         // 2. Write a file
@@ -48,7 +48,7 @@ mod integration_tests {
         let write_result = write_tool.execute(WriteToolParams {
             path: file_path.to_string_lossy().to_string(),
             content: "Hello, World!\nThis is a test file.".to_string(),
-        }).await;
+        }, None).await;
         assert!(write_result.is_success());
         
         // 3. List directory again - should show the new file
@@ -59,7 +59,7 @@ mod integration_tests {
             long_format: false,
             max_depth: None,
             max_files: None,
-        }).await;
+        }, None).await;
         assert!(ls_result.is_success());
         if let crate::tools::types::ToolResult::Success { output, .. } = ls_result {
             assert!(output.contains("test.txt"));
@@ -71,7 +71,7 @@ mod integration_tests {
             line_start: None,
             line_end: None,
             show_line_numbers: false,
-        }).await;
+        }, None).await;
         assert!(read_result.is_success());
         if let crate::tools::types::ToolResult::Success { output, .. } = read_result {
             assert!(output.contains("Hello, World!"));
@@ -84,7 +84,7 @@ mod integration_tests {
             old_string: "Hello, World!".to_string(),
             new_string: "Hello, Universe!".to_string(),
             replace_all: false,
-        }).await;
+        }, None).await;
         assert!(edit_result.is_success());
         
         // 6. Use multiedit for multiple replacements
@@ -102,7 +102,7 @@ mod integration_tests {
                     replace_all: false,
                 },
             ],
-        }).await;
+        }, None).await;
         assert!(multiedit_result.is_success());
         
         // 7. Read final result to verify all edits
@@ -111,7 +111,7 @@ mod integration_tests {
             line_start: None,
             line_end: None,
             show_line_numbers: false,
-        }).await;
+        }, None).await;
         assert!(final_read.is_success());
         if let crate::tools::types::ToolResult::Success { output, .. } = final_read {
             assert!(output.contains("Hello, Galaxy!"));
@@ -143,12 +143,12 @@ mod integration_tests {
         let _ = write_tool.execute(WriteToolParams {
             path: file1_path.to_string_lossy().to_string(),
             content: "Content of file 1".to_string(),
-        }).await;
+        }, None).await;
         
         let _ = write_tool.execute(WriteToolParams {
             path: file2_path.to_string_lossy().to_string(),
             content: "Content of file 2".to_string(),
-        }).await;
+        }, None).await;
         
         // Try to edit file1 without reading it first - should fail
         let edit_result = edit_tool.execute(EditToolParams {
@@ -156,7 +156,7 @@ mod integration_tests {
             old_string: "Content".to_string(),
             new_string: "Modified content".to_string(),
             replace_all: false,
-        }).await;
+        }, None).await;
         assert!(edit_result.is_error());
         if let crate::tools::types::ToolResult::Error { error, .. } = edit_result {
             assert!(error.contains("must be read first"));
@@ -172,7 +172,7 @@ mod integration_tests {
                     replace_all: false,
                 },
             ],
-        }).await;
+        }, None).await;
         assert!(multiedit_result.is_error());
         if let crate::tools::types::ToolResult::Error { error, .. } = multiedit_result {
             assert!(error.contains("must be read first"));
@@ -184,14 +184,14 @@ mod integration_tests {
             line_start: None,
             line_end: None,
             show_line_numbers: false,
-        }).await;
+        }, None).await;
         
         let edit_result = edit_tool.execute(EditToolParams {
             path: file1_path.to_string_lossy().to_string(),
             old_string: "Content".to_string(),
             new_string: "Modified content".to_string(),
             replace_all: false,
-        }).await;
+        }, None).await;
         assert!(edit_result.is_success());
         
         // Now read file2 and try multiediting - should succeed
@@ -200,7 +200,7 @@ mod integration_tests {
             line_start: None,
             line_end: None,
             show_line_numbers: false,
-        }).await;
+        }, None).await;
         
         let multiedit_result = multiedit_tool.execute(MultiEditToolParams {
             file_path: file2_path.to_string_lossy().to_string(),
@@ -211,7 +211,7 @@ mod integration_tests {
                     replace_all: false,
                 },
             ],
-        }).await;
+        }, None).await;
         assert!(multiedit_result.is_success());
     }
 
@@ -245,7 +245,7 @@ mod integration_tests {
             let write_result = write_tool.execute(WriteToolParams {
                 path: file_path.to_string_lossy().to_string(),
                 content: content.to_string(),
-            }).await;
+            }, None).await;
             assert!(write_result.is_success());
         }
         
@@ -261,7 +261,7 @@ mod integration_tests {
             show_line_numbers: false,
             context_lines: None,
             whole_word: false,
-        }).await;
+        }, None).await;
         assert!(find_result.is_success());
         
         // Read and edit the config.json file
@@ -271,7 +271,7 @@ mod integration_tests {
             line_start: None,
             line_end: None,
             show_line_numbers: false,
-        }).await;
+        }, None).await;
         assert!(read_result.is_success());
         
         // Edit the version in config.json
@@ -280,7 +280,7 @@ mod integration_tests {
             old_string: r#""version": "1.0""#.to_string(),
             new_string: r#""version": "2.0""#.to_string(),
             replace_all: false,
-        }).await;
+        }, None).await;
         assert!(edit_result.is_success());
         
         // Read and modify the Python script
@@ -290,7 +290,7 @@ mod integration_tests {
             line_start: None,
             line_end: None,
             show_line_numbers: false,
-        }).await;
+        }, None).await;
         assert!(read_result.is_success());
         
         let edit_result = edit_tool.execute(EditToolParams {
@@ -298,7 +298,7 @@ mod integration_tests {
             old_string: "Hello, Python!".to_string(),
             new_string: "Hello, World from Python!".to_string(),
             replace_all: false,
-        }).await;
+        }, None).await;
         assert!(edit_result.is_success());
         
         // Verify final state by reading modified files
@@ -307,7 +307,7 @@ mod integration_tests {
             line_start: None,
             line_end: None,
             show_line_numbers: false,
-        }).await;
+        }, None).await;
         assert!(final_config_read.is_success());
         if let crate::tools::types::ToolResult::Success { output, .. } = final_config_read {
             assert!(output.contains(r#""version": "2.0""#));
@@ -318,7 +318,7 @@ mod integration_tests {
             line_start: None,
             line_end: None,
             show_line_numbers: false,
-        }).await;
+        }, None).await;
         assert!(final_script_read.is_success());
         if let crate::tools::types::ToolResult::Success { output, .. } = final_script_read {
             assert!(output.contains("Hello, World from Python!"));

@@ -48,7 +48,7 @@ End of file"#;
         show_line_numbers: false,
     };
 
-    let result = read_tool.execute(params).await;
+    let result = read_tool.execute(params, None).await;
     match result {
         crate::tools::ToolResult::Success { output, .. } => {
             assert!(output.contains("Hello World"), "Should contain Hello World");
@@ -68,7 +68,7 @@ End of file"#;
         show_line_numbers: true,
     };
 
-    let result_with_lines = read_tool.execute(params_with_lines).await;
+    let result_with_lines = read_tool.execute(params_with_lines, None).await;
     println!("{}", result_with_lines);
     match result_with_lines {
         crate::tools::ToolResult::Success { output, .. } => {
@@ -108,7 +108,7 @@ async fn test_read_tool_line_range_reading() {
         show_line_numbers: true,
     };
 
-    let result_range = read_tool.execute(params_range).await;
+    let result_range = read_tool.execute(params_range, None).await;
     match result_range {
         crate::tools::ToolResult::Success { output, .. } => {
             assert!(output.contains("Line 5: Content for line 5"), "Should contain line 5");
@@ -133,7 +133,7 @@ async fn test_read_tool_line_range_reading() {
         show_line_numbers: true,
     };
 
-    let result_from_line = read_tool.execute(params_from_line).await;
+    let result_from_line = read_tool.execute(params_from_line, None).await;
     match result_from_line {
         crate::tools::ToolResult::Success { output, .. } => {
             assert!(output.contains("Line 15: Content for line 15"), "Should contain line 15");
@@ -157,7 +157,7 @@ async fn test_read_tool_line_range_reading() {
         show_line_numbers: false,
     };
 
-    let result_nonexistent = read_tool.execute(params_nonexistent).await;
+    let result_nonexistent = read_tool.execute(params_nonexistent, None).await;
     match result_nonexistent {
         crate::tools::ToolResult::Success { .. } => {
             panic!("Read tool should fail for non-existent file");

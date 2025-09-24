@@ -51,7 +51,7 @@ async fn test_multiedit_multiple_replacements() {
         ],
     };
 
-    let result = tool.execute(params).await;
+    let result = tool.execute(params, None).await;
     assert!(result.is_success());
     
     let content = fs::read_to_string(&file_path).unwrap();

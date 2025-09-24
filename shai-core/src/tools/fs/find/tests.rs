@@ -63,7 +63,7 @@ fn main() {
         whole_word: false,
     };
 
-    let result = find_tool.execute(params).await;
+    let result = find_tool.execute(params, None).await;
     match result {
         crate::tools::ToolResult::Success { output, .. } => {
             assert!(output.contains("struct User"), "Should find struct User in results");
@@ -89,7 +89,7 @@ fn main() {
         whole_word: false,
     };
 
-    let result = find_tool.execute(params).await;
+    let result = find_tool.execute(params, None).await;
     match result {
         crate::tools::ToolResult::Success { output, .. } => {
             assert!(output.contains("email"), "Should find email in results");
@@ -128,7 +128,7 @@ async fn test_find_tool_filename_search() {
         whole_word: false,
     };
 
-    let result = find_tool.execute(params).await;
+    let result = find_tool.execute(params, None).await;
     match result {
         crate::tools::ToolResult::Success { output, .. } => {
             assert!(output.contains("user_model.rs"), "Should find user_model.rs");
@@ -181,7 +181,7 @@ async fn test_find_tool_with_filters() {
         whole_word: false,
     };
 
-    let result = find_tool.execute(params).await;
+    let result = find_tool.execute(params, None).await;
     match result {
         crate::tools::ToolResult::Success { output, .. } => {
             assert!(output.contains("Library"), "Should find struct Library");
@@ -230,7 +230,7 @@ fn calculate_guest_score() -> u32 {
         whole_word: false,
     };
 
-    let result = find_tool.execute(params).await;
+    let result = find_tool.execute(params, None).await;
     match result {
         crate::tools::ToolResult::Success { output, .. } => {
             assert!(output.contains("calculate_user_score"), "Should find calculate_user_score");
@@ -270,7 +270,7 @@ async fn test_find_tool_invalid_regex() {
         whole_word: false,
     };
 
-    let result = find_tool.execute(params).await;
+    let result = find_tool.execute(params, None).await;
     match result {
         crate::tools::ToolResult::Success { .. } => {
             panic!("Find tool should return error for invalid regex");

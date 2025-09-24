@@ -61,7 +61,7 @@ mod tests {
         let storage = create_test_storage();
         let read_tool = TodoReadTool::new(storage);
         
-        let result = read_tool.execute(ToolEmptyParams::default()).await;
+        let result = read_tool.execute(ToolEmptyParams::default(), None).await;
         
         assert!(result.is_success());
         if let ToolResult::Success { output, metadata } = result {
@@ -85,7 +85,7 @@ mod tests {
             ],
         };
 
-        let result = write_tool.execute(params).await;
+        let result = write_tool.execute(params, None).await;
         
         assert!(result.is_success());
         if let ToolResult::Success { output, metadata } = result {
@@ -110,7 +110,7 @@ mod tests {
             todos: vec![],
         };
 
-        let result = write_tool.execute(params).await;
+        let result = write_tool.execute(params, None).await;
         
         assert!(result.is_success());
         if let ToolResult::Success { output, metadata } = result {
@@ -136,7 +136,7 @@ mod tests {
                 create_sample_todo_input("Initial task", TodoStatus::Pending),
             ],
         };
-        write_tool.execute(initial_params).await;
+        write_tool.execute(initial_params, None).await;
         
         // Replace with new todos
         let new_params = TodoWriteParams {
@@ -146,7 +146,7 @@ mod tests {
             ],
         };
         
-        let result = write_tool.execute(new_params).await;
+        let result = write_tool.execute(new_params, None).await;
         assert!(result.is_success());
         
         // Verify old todos were replaced
@@ -165,7 +165,7 @@ mod tests {
         let write_tool = TodoWriteTool::new(storage.clone());
         
         // Initially empty
-        let empty_result = read_tool.execute(ToolEmptyParams::default()).await;
+        let empty_result = read_tool.execute(ToolEmptyParams::default(), None).await;
         assert!(empty_result.is_success());
         if let ToolResult::Success { output, .. } = empty_result {
             assert!(output.contains("No todos found"));
@@ -179,11 +179,11 @@ mod tests {
             ],
         };
         
-        let write_result = write_tool.execute(write_params).await;
+        let write_result = write_tool.execute(write_params, None).await;
         assert!(write_result.is_success());
         
         // Read todos back
-        let read_result = read_tool.execute(ToolEmptyParams::default()).await;
+        let read_result = read_tool.execute(ToolEmptyParams::default(), None).await;
         assert!(read_result.is_success());
         
         if let ToolResult::Success { output, metadata } = read_result {
@@ -213,9 +213,9 @@ mod tests {
             ],
         };
         
-        write_tool.execute(write_params).await;
+        write_tool.execute(write_params, None).await;
         
-        let read_result = read_tool.execute(ToolEmptyParams::default()).await;
+        let read_result = read_tool.execute(ToolEmptyParams::default(), None).await;
         assert!(read_result.is_success());
         
         if let ToolResult::Success { output, .. } = read_result {

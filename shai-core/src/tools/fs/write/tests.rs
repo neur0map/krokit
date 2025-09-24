@@ -36,7 +36,7 @@ async fn test_write_new_file() {
         content: "Hello, World!".to_string(),
     };
 
-    let result = tool.execute(params).await;
+    let result = tool.execute(params, None).await;
     assert!(result.is_success());
     if let crate::tools::types::ToolResult::Success { output, .. } = result {
         assert!(output.contains("created"));

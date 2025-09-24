@@ -32,7 +32,7 @@ async fn test_bash_tool_execution() {
         env: HashMap::new(),
     };
     
-    let result = Tool::execute(&tool, params).await;
+    let result = Tool::execute(&tool, params, None).await;
     assert!(result.is_success());
     if let crate::tools::types::ToolResult::Success { output, metadata } = result {
         assert!(output.contains("hello"));
