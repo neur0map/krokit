@@ -66,6 +66,7 @@ impl BashTool {
         // Spawn the process
         #[cfg(unix)]
         cmd.process_group(0);
+        
         let mut child = cmd.spawn()?;
         
         // Read output asynchronously (needed to prevent blocking on full buffers)
