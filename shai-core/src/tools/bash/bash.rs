@@ -30,10 +30,6 @@ impl BashTool {
                     // Force kill if still running
                     libc::kill(-(pid as i32), libc::SIGKILL);
                 }
-            } else {
-                unsafe {
-                    libc::exit(0);
-                }
             }
         }
         
@@ -68,6 +64,7 @@ impl BashTool {
            .stdin(Stdio::null());
 
         // Spawn the process
+        #[cfg(unix)]
         cmd.process_group(0);
         let mut child = cmd.spawn()?;
         
