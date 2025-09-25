@@ -36,7 +36,9 @@ pub enum InternalAgentEvent {
         result: ToolResult
     },
     /// All tools completed execution
-    ToolsCompleted,
+    ToolsCompleted {
+        any_denied: bool,
+    },
     /// User response received from controller
     UserResponseReceived { 
         request_id: String,
@@ -145,7 +147,9 @@ pub enum PermissionResponse {
     Allow,
     /// Allow this type of operation always
     AllowAlways,
-    /// Deny this operation
+    /// Operation Forbidden
+    Forbidden,
+    /// Operation was denied
     Deny,
     /// No permission system available (auto-deny for safety)
     NoPermissionSystem,

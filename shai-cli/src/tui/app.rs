@@ -287,7 +287,7 @@ impl App<'_> {
                 if let Some(ref agent) = self.agent {     
                     if matches!(choice, PermissionResponse::AllowAlways) {
                         let _ = agent.controller.sudo().await;
-                    }                 
+                    }        
                     match agent.controller.response_permission_request(request_id, choice).await {
                         Err(e) => {
                             self.input.alert_msg("channel with agent closed. Please restart the app", Duration::from_secs(3));
@@ -347,7 +347,7 @@ impl App<'_> {
             UserAction::CancelTask => {
                 if let Some(ref agent) = self.agent {
                     let _ = agent.controller.test_stop_current_task().await;
-                    self.input.alert_msg("Task cancelled",Duration::from_secs(1));
+                    self.input.alert_msg("Task cancelled", Duration::from_secs(1));
                 }
             }
             UserAction::UserInput { input } => {

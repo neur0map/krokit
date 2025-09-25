@@ -229,6 +229,10 @@ impl PrettyFormatter {
                 // Use ANSI codes: entire line dim red
                 output.push_str(&format!("  ⎿ \x1b[2;31mError: {}\x1b[0m", error));
             }
+            ToolResult::Denied => {
+                // Use ANSI codes: entire line dim red
+                output.push_str(&format!("  ⎿ \x1b[2;31mDenied: The tool call was rejected by the user\x1b[0m"));
+            }
         }
         
         output
