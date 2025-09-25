@@ -6,10 +6,22 @@ shai is a coding agent, your pair programming buddy that lives in the terminal. 
 
 ## Install
 
+### install latest stable release
+
 Install the latest release with the following command:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/ovh/shai/main/install.sh | sh
+```
+
+the `shai` binary will be installed in `$HOME/.local/bin`
+
+### install ``unstable`` version
+
+Install the last [``unstable``](https://github.com/ovh/shai/releases/tag/unstable) version with the following command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ovh/shai/main/install.sh | SHAI_RELEASE=unstable sh
 ```
 
 the `shai` binary will be installed in `$HOME/.local/bin`
