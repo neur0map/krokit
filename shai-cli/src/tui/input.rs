@@ -304,7 +304,7 @@ impl InputArea<'_> {
                 self.input.input(event);
                 return UserAction::Nope;
             }
-            KeyCode::Enter => {                
+            KeyCode::Enter => {   
                 // Alt+Enter creates a new line immediately
                 if key_event.modifiers.contains(KeyModifiers::ALT) {
                     self.last_keystroke_time = Some(now);

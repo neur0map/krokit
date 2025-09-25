@@ -49,14 +49,18 @@ impl AgentCore {
                 _ = cancel_clone.cancelled() => {
                     // Tools were cancelled, no need to send completion event
                 }
-                _ = async {
-                    // wait for all tools completion
+                any_denied = async {
+                    // wait for all tools completion and collect denial status
+                    let mut result = false;
                     for handle in join_handles {
-                        let _ = handle.await;
+                        if let Ok(was_denied) = handle.await {
+                            result = result || was_denied;
+                        }
                     }
+                    result
                 } => {
                     // All tools completed, move to Running state
-                    let _ = internal_tx.send(InternalAgentEvent::ToolsCompleted);
+                    let _ = internal_tx.send(InternalAgentEvent::ToolsCompleted { any_denied });
                 }
             }
         });
@@ -79,7 +83,7 @@ impl AgentCore {
         claims: Arc<RwLock<ClaimManager>>,
         internal_tx: broadcast::Sender<InternalAgentEvent>,
         trace: Arc<RwLock<Vec<ChatMessage>>>,
-    ) -> tokio::task::JoinHandle<()> {
+    ) -> tokio::task::JoinHandle<bool> {
         tokio::spawn(async move {
             let tc_for_error = tc.clone();
             match Self::tool_exist(available_tools, tc) {
@@ -93,9 +97,10 @@ impl AgentCore {
                                 tool_name: tc_for_error.function.name.clone(),
                                 parameters: serde_json::Value::Null
                             }, 
-                            result: tool_result 
+                            result: tool_result
                         });
                     }
+                    false
                 }
 
                 // emit tool call
@@ -146,6 +151,7 @@ impl AgentCore {
                     };
 
                     // Emit tool call finish event
+                    let tool_was_denied = result.is_denied();
                     info!(target: "agent::tool_completed", call = ?tc_for_error.function.name.clone(), result = ?result);
                     if let Some(tx) = public_event_tx.clone() {
                         let _ = tx.send(AgentEvent::ToolCallCompleted { 
@@ -154,6 +160,8 @@ impl AgentCore {
                             result 
                         });   
                     }
+
+                    tool_was_denied                    
                 }
             }
         })
@@ -180,16 +188,16 @@ impl AgentCore {
                 Err(preview_error) => return preview_error, // Return preview error immediately
             };
 
-            if can_run {
-                // Execute tool with cancellation support
-                tokio::select! {
-                    result = tool.execute_json(call.parameters.clone(), Some(cancel_token.clone())) => result,
-                    _ = cancel_token.cancelled() => {
-                        ToolResult::error("tool call was cancelled by the user".to_string())
-                    }
+            if !can_run {
+                return ToolResult::denied()
+            }
+            
+            // Execute tool with cancellation support
+            tokio::select! {
+                result = tool.execute_json(call.parameters.clone(), Some(cancel_token.clone())) => result,
+                _ = cancel_token.cancelled() => {
+                    ToolResult::error("tool call was cancelled by the user".to_string())
                 }
-            } else {
-                ToolResult::error("permission to execute this tool was denied by the user".to_string())
             }
         })
     }
@@ -235,8 +243,7 @@ impl AgentCore {
             tokio::select! {
                 recv_result = internal_rx.recv() => {
                     match recv_result {
-                        Ok(InternalAgentEvent::PermissionResponseReceived { request_id, response }) 
-                            if request_id == req_id => {
+                        Ok(InternalAgentEvent::PermissionResponseReceived { request_id, response }) if request_id == req_id => {
                             return Ok(matches!(response, PermissionResponse::Allow | PermissionResponse::AllowAlways));
                         }
                         Ok(_) => continue,

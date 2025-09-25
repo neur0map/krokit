@@ -458,7 +458,7 @@ impl AgentCore {
                 self.state_pause_handle_event(event).await
             }
             _ => {
-                self.state_terminal_handle_event( event).await
+                self.state_terminal_handle_event(event).await
             }
         }
     }

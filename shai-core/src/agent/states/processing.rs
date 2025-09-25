@@ -12,8 +12,12 @@ impl AgentCore {
             InternalAgentEvent::BrainResult { result } => {
                 self.process_next_step(result).await
             },
-            InternalAgentEvent::ToolsCompleted => {
-                self.set_state(InternalAgentState::Running).await;
+            InternalAgentEvent::ToolsCompleted { any_denied } => {
+                if any_denied {
+                    self.set_state(InternalAgentState::Paused).await;
+                } else {
+                    self.set_state(InternalAgentState::Running).await;
+                }
                 Ok(())
             },
             _ => {

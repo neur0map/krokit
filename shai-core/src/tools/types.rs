@@ -46,6 +46,7 @@ pub enum ToolResult {
         error: String,
         metadata: Option<HashMap<String, serde_json::Value>>,
     },
+    Denied,
 }
 
 impl fmt::Display for ToolResult {
@@ -53,6 +54,7 @@ impl fmt::Display for ToolResult {
         match self {
             ToolResult::Success { output, .. } => write!(f, "{}", output),
             ToolResult::Error { error, .. } => write!(f, "The tool failed with the following error: {}", error),
+            ToolResult::Denied  => write!(f, "The tool call was rejected by the user"),
         }
     }
 }
@@ -81,6 +83,11 @@ impl ToolResult {
             metadata: None,
         }
     }
+
+    /// Create an error result
+    pub fn denied() -> Self {
+        Self::Denied
+    }
     
     /// Create an error result with metadata
     pub fn error_with_metadata(error: String, metadata: HashMap<String, serde_json::Value>) -> Self {
@@ -98,6 +105,11 @@ impl ToolResult {
     /// Check if the result is an error
     pub fn is_error(&self) -> bool {
         matches!(self, Self::Error { .. })
+    }
+
+    /// Check if the tool was denied
+    pub fn is_denied(&self) -> bool {
+        matches!(self, Self::Denied)
     }
 }
 
