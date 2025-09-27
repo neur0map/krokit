@@ -1,4 +1,4 @@
-# Contributing to SHAI
+# Contributing to KROKIT
  
 This project accepts contributions. In order to contribute, you should
 pay attention to a few things:
@@ -13,10 +13,10 @@ pay attention to a few things:
 
 When creating a new release, make sure to update the version in the following locations:
 
-1. **Main CLI version**: Update `version` in `shai-cli/Cargo.toml`
-2. **Core crate version**: Update `version` in `shai-core/Cargo.toml` 
-3. **LLM crate version**: Update `version` in `shai-llm/Cargo.toml`
-4. **Macros crate version**: Update `version` in `shai-macros/Cargo.toml`
+1. **Main CLI version**: Update `version` in `krokit-cli/Cargo.toml`
+2. **Core crate version**: Update `version` in `krokit-core/Cargo.toml`
+3. **LLM crate version**: Update `version` in `krokit-llm/Cargo.toml`
+4. **Macros crate version**: Update `version` in `krokit-macros/Cargo.toml`
 
 The version banner in the CLI logo is automatically generated from the main CLI crate version using `env!("CARGO_PKG_VERSION")`, so no manual update is needed for the display version.
 
@@ -32,8 +32,8 @@ and follow the DCO which is defined below.
  
 # Licensing for new files
  
-SHAI is licensed under a APACHE 2.0 license. Anything
-contributed to SHAI must be released under this license.
+KROKIT is licensed under a APACHE 2.0 license. Anything
+contributed to KROKIT must be released under this license.
  
 When introducing a new file into the project, please make sure it has a
 copyright header making clear under which license it's being released.

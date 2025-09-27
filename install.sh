@@ -3,9 +3,9 @@
 set -e
 
 # Configuration
-PROGNAME="shai"
-REPO="ovh/shai"
-BINARY_NAME="shai"
+PROGNAME="krokit"
+REPO="neur0map/krokit"
+BINARY_NAME="krokit"
 INSTALL_DIR="$HOME/.local/bin"
 
 # Colors for output
@@ -190,9 +190,9 @@ main() {
     
     # Get a release
     local release_json
-    if [ -n "${SHAI_RELEASE}" ] && [ "${SHAI_RELEASE}" != "latest" ]; then
-        release_json=$(get_release_for_tag "${SHAI_RELEASE}")
-        download_bin_name=$(get_download_binary_name "${platform}" "${SHAI_RELEASE}")
+    if [ -n "${KROKIT_RELEASE}" ] && [ "${KROKIT_RELEASE}" != "latest" ]; then
+        release_json=$(get_release_for_tag "${KROKIT_RELEASE}")
+        download_bin_name=$(get_download_binary_name "${platform}" "${KROKIT_RELEASE}")
     else
         release_json=$(get_latest_release)
         download_bin_name=$(get_download_binary_name "${platform}")

@@ -1625,6 +1625,106 @@ dependencies = [
 ]
 
 [[package]]
+name = "krokit"
+version = "0.1.0"
+dependencies = [
+ "ansi-to-tui",
+ "async-trait",
+ "chrono",
+ "clap",
+ "cli-clipboard",
+ "console",
+ "crossterm 0.28.1",
+ "figrs",
+ "futures 0.3.31",
+ "krokit-core",
+ "krokit-llm",
+ "libc",
+ "rand 0.9.1",
+ "ratatui",
+ "ringbuffer",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "textwrap",
+ "tokio",
+ "tui-textarea",
+]
+
+[[package]]
+name = "krokit-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "dirs",
+ "fs",
+ "futures 0.3.31",
+ "krokit-llm",
+ "krokit-macros",
+ "libc",
+ "oauth2 4.4.2",
+ "openai_dive",
+ "paste",
+ "regex",
+ "reqwest 0.12.20",
+ "rmcp",
+ "schemars",
+ "serde",
+ "serde_json",
+ "similar",
+ "tempfile",
+ "termimad",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "tree-sitter",
+ "tree-sitter-highlight",
+ "uuid",
+ "walkdir",
+ "warp",
+ "webbrowser",
+]
+
+[[package]]
+name = "krokit-llm"
+version = "0.1.0"
+dependencies = [
+ "async-stream",
+ "async-trait",
+ "chrono",
+ "fastrand",
+ "futures 0.3.31",
+ "krokit-macros",
+ "native-tls",
+ "openai_dive",
+ "openssl",
+ "paste",
+ "regex",
+ "reqwest 0.12.20",
+ "reqwest-eventsource",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "krokit-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.103",
+]
+
+[[package]]
 name = "lazy-regex"
 version = "3.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3017,106 +3117,6 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
-]
-
-[[package]]
-name = "shai"
-version = "0.1.5"
-dependencies = [
- "ansi-to-tui",
- "async-trait",
- "chrono",
- "clap",
- "cli-clipboard",
- "console",
- "crossterm 0.28.1",
- "figrs",
- "futures 0.3.31",
- "libc",
- "rand 0.9.1",
- "ratatui",
- "ringbuffer",
- "rmp-serde",
- "serde",
- "serde_json",
- "shai-core",
- "shai-llm",
- "tempfile",
- "textwrap",
- "tokio",
- "tui-textarea",
-]
-
-[[package]]
-name = "shai-core"
-version = "0.1.5"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "dirs",
- "fs",
- "futures 0.3.31",
- "libc",
- "oauth2 4.4.2",
- "openai_dive",
- "paste",
- "regex",
- "reqwest 0.12.20",
- "rmcp",
- "schemars",
- "serde",
- "serde_json",
- "shai-llm",
- "shai-macros",
- "similar",
- "tempfile",
- "termimad",
- "thiserror 2.0.12",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "tree-sitter",
- "tree-sitter-highlight",
- "uuid",
- "walkdir",
- "warp",
- "webbrowser",
-]
-
-[[package]]
-name = "shai-llm"
-version = "0.1.5"
-dependencies = [
- "async-stream",
- "async-trait",
- "chrono",
- "fastrand",
- "futures 0.3.31",
- "native-tls",
- "openai_dive",
- "openssl",
- "paste",
- "regex",
- "reqwest 0.12.20",
- "reqwest-eventsource",
- "schemars",
- "serde",
- "serde_json",
- "shai-macros",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "shai-macros"
-version = "0.1.5"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.103",
 ]
 
 [[package]]
