@@ -112,11 +112,8 @@ impl InputArea<'_> {
     }
 
     fn update_command_suggestions(&mut self) {
-        if let Some(prefix) = self.get_command_prefix() {
-            self.cmdnav.show_suggestions(&prefix);
-        } else {
-            self.cmdnav.hide_suggestions();
-        }
+        // Disable slash-command suggestion popup
+        self.cmdnav.hide_suggestions();
     }
 
     fn handle_suggestion_keys(&mut self, key_code: KeyCode) -> bool {
@@ -325,15 +322,7 @@ impl InputArea<'_> {
             KeyCode::Char('?') if self.input.lines()[0].is_empty() && self.help.is_none() => {
                 self.help = Some(HelpArea);
             }
-            KeyCode::Char('/') if self.input.lines()[0].is_empty() => {
-                // Handle "/" character - let it be processed normally first, then show suggestions
-                self.help = None;
-                let event: Event = Event::Key(KeyEvent::from(key_event));
-                let input: Input = event.into();
-                self.input.input(input);
-                self.update_command_suggestions();
-                return UserAction::Nope;
-            }
+            // Remove auto popup of slash-commands on '/'
             KeyCode::Esc => {
                 if self.agent_running {
                     return UserAction::CancelTask;

@@ -9,7 +9,7 @@ impl HelpArea {
     fn helper_msg(&self) -> String {
         [
             "  ? to print help      tap esc twice to clear input",
-            "  / for commands       tap esc while agent is running to cancel",
+            "                       tap esc while agent is running to cancel",
             "                       ctrl^c to exit",
             "",
             "  Available Commands:",
@@ -27,7 +27,8 @@ impl HelpArea {
     pub fn draw(&self, f: &mut Frame, area: Rect) {
         let helper_text = self.helper_msg();
         let x = helper_text.into_text().unwrap();
-        let x = x.style(Style::default().fg(Color::DarkGray).dim());
+        // Make help text more visible
+        let x = x.style(Style::default().fg(Color::White));
         f.render_widget(
             x, 
             area

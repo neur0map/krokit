@@ -91,6 +91,11 @@ impl App<'_> {
             
             Box::new(coder(Arc::new(llm), model))
         };
+
+        // Also show the working directory where krokit was launched
+        if let Ok(cwd) = std::env::current_dir() {
+            println!("\x1b[2m░ cwd: {}\x1b[0m", cwd.display());
+        }
         
         // Get Agent I/O
         let controller = agent.controller();
@@ -413,4 +418,3 @@ impl App<'_> {
     }
 
 }
-
