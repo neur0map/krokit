@@ -16,10 +16,7 @@ impl HelpArea {
             "  ? to print help      tap esc twice to clear input",
             "                       tap esc while agent is running to cancel",
             "  krokit auth          change provider",
-            "  Available Commands:",
-            "  /exit                exit from the tui",
-            "  /tc <method>         set tool call method: [auto | fc | fc2 | so]",
-            "  /model               to change model from your current provider",
+            "  See Available Commands with /:",
         ]
         .join("\n")
         .to_string()

@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Style, Stylize},
     symbols::border,
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, Clear, List, ListItem, ListState},
     Frame,
 };
@@ -22,6 +22,8 @@ pub struct CommandNav {
     is_visible: bool,
     filter_text: String,
     list_state: ListState,
+    max_lines: u16,
+    view_offset: usize,
 }
 
 #[derive(Debug, PartialEq)]
@@ -39,6 +41,8 @@ impl CommandNav {
             is_visible: false,
             filter_text: String::new(),
             list_state: ListState::default(),
+            max_lines: 8,
+            view_offset: 0,
         };
         nav.load_commands();
         nav
@@ -69,6 +73,7 @@ impl CommandNav {
         if !self.filtered_suggestions.is_empty() {
             self.is_visible = true;
             self.selected_index = 0;
+            self.view_offset = 0;
             self.update_list_state();
         } else {
             self.is_visible = false;
@@ -80,6 +85,7 @@ impl CommandNav {
         self.filter_text.clear();
         self.filtered_suggestions.clear();
         self.selected_index = 0;
+        self.view_offset = 0;
     }
 
     pub fn navigate(&mut self, direction: NavDirection) {
@@ -89,18 +95,15 @@ impl CommandNav {
 
         match direction {
             NavDirection::Up => {
-                if self.selected_index > 0 {
-                    self.selected_index -= 1;
-                } else {
-                    self.selected_index = self.filtered_suggestions.len() - 1;
-                }
+                if self.selected_index > 0 { self.selected_index -= 1; }
+                else { self.selected_index = self.filtered_suggestions.len().saturating_sub(1); }
+                if self.selected_index < self.view_offset { self.view_offset = self.selected_index; }
             }
             NavDirection::Down => {
-                if self.selected_index < self.filtered_suggestions.len() - 1 {
-                    self.selected_index += 1;
-                } else {
-                    self.selected_index = 0;
-                }
+                if self.selected_index + 1 < self.filtered_suggestions.len() { self.selected_index += 1; }
+                else { self.selected_index = 0; self.view_offset = 0; }
+                let max = self.max_lines as usize;
+                if self.selected_index >= self.view_offset + max { self.view_offset = self.selected_index + 1 - max; }
             }
         }
         self.update_list_state();
@@ -132,6 +135,8 @@ impl CommandNav {
                 .cloned()
                 .collect();
         }
+        self.selected_index = 0;
+        self.view_offset = 0;
     }
 
     fn update_list_state(&mut self) {
@@ -235,5 +240,35 @@ impl CommandNav {
             );
 
         f.render_stateful_widget(list, popup_area, &mut self.list_state);
+    }
+
+    pub fn height(&self) -> u16 {
+        if !self.is_showing() { return 0; }
+        (self.filtered_suggestions.len() as u16).min(self.max_lines)
+    }
+
+    pub fn render_inline(&self, f: &mut Frame, area: Rect) {
+        if !self.is_showing() || area.height == 0 { return; }
+        let mut lines: Vec<Line> = Vec::new();
+        let max = self.height() as usize;
+        for (i, sug) in self.filtered_suggestions.iter().skip(self.view_offset).take(max).enumerate() {
+            let idx = self.view_offset + i;
+            let text = sug.command.clone();
+            if idx == self.selected_index {
+                lines.push(Line::from(Span::styled(text, Style::default().fg(Color::White).bold())));
+            } else {
+                lines.push(Line::from(Span::styled(text, Style::default().fg(Color::Gray))));
+            }
+        }
+        let text = Text::from(lines);
+        f.render_widget(text, area);
+    }
+
+    pub fn selected_has_args(&self) -> bool {
+        if !self.is_showing() || self.filtered_suggestions.is_empty() { return false; }
+        self.filtered_suggestions
+            .get(self.selected_index)
+            .map(|s| !s.args.is_empty())
+            .unwrap_or(false)
     }
 }

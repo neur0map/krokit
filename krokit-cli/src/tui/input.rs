@@ -114,8 +114,11 @@ impl InputArea<'_> {
     }
 
     fn update_command_suggestions(&mut self) {
-        // Disable slash-command suggestion popup
-        self.cmdnav.hide_suggestions();
+        if let Some(prefix) = self.get_command_prefix() {
+            self.cmdnav.show_suggestions(&prefix);
+        } else {
+            self.cmdnav.hide_suggestions();
+        }
     }
 
     fn at_prefix(&self) -> Option<(usize, String)> {
@@ -181,8 +184,17 @@ impl InputArea<'_> {
                 true
             }
             KeyCode::Tab => {
-                if let Some(completion) = self.cmdnav.get_selected_completion() {
-                    // Replace current input with the completed command
+                if let Some(mut completion) = self.cmdnav.get_selected_completion() {
+                    if self.cmdnav.selected_has_args() { completion.push(' '); }
+                    self.input = TextArea::new(vec![completion]);
+                    self.move_cursor_to_end_of_text();
+                    self.cmdnav.hide_suggestions();
+                }
+                true
+            }
+            KeyCode::Enter => {
+                if let Some(mut completion) = self.cmdnav.get_selected_completion() {
+                    if self.cmdnav.selected_has_args() { completion.push(' '); }
                     self.input = TextArea::new(vec![completion]);
                     self.move_cursor_to_end_of_text();
                     self.cmdnav.hide_suggestions();
@@ -363,11 +375,6 @@ impl InputArea<'_> {
             self.input.input(event);
         }
 
-        // Handle command suggestion navigation first (disabled for now)
-        if self.handle_suggestion_keys(key_event.code) {
-            return UserAction::Nope;
-        }
-
         // Handle file suggestion navigation if visible
         match key_event.code {
             KeyCode::Up if self.filenav.is_showing() => { self.filenav.move_up(); return UserAction::Nope; }
@@ -376,6 +383,11 @@ impl InputArea<'_> {
             KeyCode::PageDown if self.filenav.is_showing() => { self.filenav.page_down(); return UserAction::Nope; }
             KeyCode::Tab if self.filenav.is_showing() => { let _ = self.commit_selected_file(); return UserAction::Nope; }
             _ => {}
+        }
+
+        // Handle command suggestion navigation
+        if self.handle_suggestion_keys(key_event.code) {
+            return UserAction::Nope;
         }
 
         match key_event.code {
@@ -447,6 +459,16 @@ impl InputArea<'_> {
                 // If file suggestions are showing, commit the selected suggestion
                 if self.commit_selected_file() {
                     return UserAction::Nope;
+                }
+                // If command suggestions are showing, commit selected command
+                if self.cmdnav.is_showing() {
+                    if let Some(mut completion) = self.cmdnav.get_selected_completion() {
+                        if self.cmdnav.selected_has_args() { completion.push(' '); }
+                        self.input = TextArea::new(vec![completion]);
+                        self.move_cursor_to_end_of_text();
+                        self.cmdnav.hide_suggestions();
+                        return UserAction::Nope;
+                    }
                 }
                 // Regular Enter - set pending and wait
                 self.pending_enter = Some(now);
@@ -524,9 +546,10 @@ impl InputArea<'_> {
         let input_block = input_lines + 2; // borders
         let helper_line = 1u16;
         let files = self.filenav.height();
+        let cmds = self.cmdnav.height();
         let help = self.help.as_ref().map_or(0, |h| h.height());
         // include status line at top
-        1 + input_block + helper_line + files + help
+        1 + input_block + helper_line + files + cmds + help
     }
 
     pub fn draw(&mut self, f: &mut Frame, area: Rect) {
@@ -535,11 +558,13 @@ impl InputArea<'_> {
         let files_h = self.filenav.height();
         let help_h = self.help.as_ref().map_or(0, |h| h.height());
 
-        let [status, input_area, helper, files_area, help_area] = Layout::vertical([
+        let cmd_h = self.cmdnav.height();
+        let [status, input_area, helper, files_area, cmds_area, help_area] = Layout::vertical([
             Constraint::Length(1),
             Constraint::Length(input_block), 
             Constraint::Length(1),
             Constraint::Length(files_h),
+            Constraint::Length(cmd_h),
             Constraint::Length(help_h)
         ]).areas(area);
         
@@ -596,7 +621,7 @@ impl InputArea<'_> {
         // File suggestions (plain list, bottom)
         self.filenav.draw(f, files_area);
 
-        // Command suggestions popup (disabled visually)
-        self.cmdnav.render(f, input_area);
+        // Command suggestions inline (plain list)
+        self.cmdnav.render_inline(f, cmds_area);
     }
 }

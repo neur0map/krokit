@@ -38,6 +38,9 @@ use std::collections::{HashMap, VecDeque};
 use crate::tui::input::InputArea;
 use super::input::UserAction;
 use crate::tui::perm::PermissionWidget;
+use crate::tui::auth::config_model::ModalModel;
+use crate::tui::auth::auth::NavAction;
+use krokit_llm::provider::ProviderInfo;
 use crate::tui::perm_alt_screen::AlternateScreenPermissionModal;
 use super::perm::PermissionModalAction;
 
@@ -46,6 +49,9 @@ pub enum AppModalState<'a> {
     InputShown,
     PermissionModal {
         widget: PermissionWidget<'a>   
+    },
+    ModelModal {
+        modal: ModalModel,
     }
 }
 
@@ -69,6 +75,9 @@ pub struct App<'a> {
     pub(crate) commands: HashMap<(String, String),Vec<String>>,
     pub(crate) exit: bool,
     pub(crate) permission_queue: VecDeque<(String, PermissionRequest)>, // (request_id, request)
+    pub(crate) agent_name: Option<String>,
+    pub(crate) banner_line: Option<String>,
+    pub(crate) cwd_line: Option<String>,
 }
 
 
@@ -78,8 +87,8 @@ impl App<'_> {
         let mut agent: Box<dyn Agent> = if let Some(agent_name) = agent_name {
             // Load custom agent config
             let config = AgentConfig::load(agent_name)?;
-            
-            println!("\x1b[2m░ agent {} - {} on {}\x1b[0m", agent_name, config.llm_provider.model, config.llm_provider.provider);
+            // Update banner (rendered by draw_ui)
+            self.banner_line = Some(format!("\x1b[2m░ agent {} - {} on {}\x1b[0m", agent_name, config.llm_provider.model, config.llm_provider.provider));
             
             // Create agent from config
             let agent_builder = AgentBuilder::from_config(config).await?;
@@ -87,15 +96,12 @@ impl App<'_> {
         } else {
             // Use default coder agent
             let (llm, model) = KrokitConfig::get_llm().await?;
-            println!("\x1b[2m░ {} on {}\x1b[0m", model, llm.provider().name());
-            
+            self.banner_line = Some(format!("\x1b[2m░ {} on {}\x1b[0m", model, llm.provider().name()));
+
             Box::new(coder(Arc::new(llm), model))
         };
 
-        // Also show the working directory where krokit was launched
-        if let Ok(cwd) = std::env::current_dir() {
-            println!("\x1b[2m░ cwd: {}\x1b[0m", cwd.display());
-        }
+        // cwd printed by header draw; no stdout printing here
         
         // Get Agent I/O
         let controller = agent.controller();
@@ -176,6 +182,9 @@ impl App<'_> {
             exit: false,
             running_tools: HashMap::new(),
             permission_queue: VecDeque::new(),
+            agent_name: None,
+            banner_line: None,
+            cwd_line: std::env::current_dir().ok().map(|p| format!("\x1b[2m░ cwd: {}\x1b[0m", p.display())),
         }
     }
 
@@ -196,6 +205,7 @@ impl App<'_> {
 
     async fn try_run(&mut self, agent_name: Option<String>) ->Result<(), Box<dyn std::error::Error>> {
         // Start the agent (custom or default)
+        self.agent_name = agent_name.clone();
         let agent_name_ref = agent_name.as_deref();
         self.start_agent(agent_name_ref).await.map_err(|e| -> Box<dyn std::error::Error> { 
             if agent_name_ref.is_some() {
@@ -279,6 +289,19 @@ impl App<'_> {
             AppModalState::PermissionModal { widget  } => {
                 let action = widget.handle_key_event(key_event).await;
                 self.handle_permission_action(action).await?;
+            },
+            AppModalState::ModelModal { modal } => {
+                match modal.handle_event(key_event).await {
+                    NavAction::Done => {
+                        let selected = modal.selected_model();
+                        self.apply_model_change(selected).await?;
+                        self.state = AppModalState::InputShown;
+                    }
+                    NavAction::Back => {
+                        self.state = AppModalState::InputShown;
+                    }
+                    _ => {}
+                }
             }
         }
         Ok(())
@@ -377,9 +400,14 @@ impl App<'_> {
         let modal_height = match &self.state {
             AppModalState::InputShown => self.input.height(),
             AppModalState::PermissionModal { widget } => widget.height(),
+            AppModalState::ModelModal { modal } => modal.height() as u16,
         }.max(5);
+        // header shows banner and optional cwd
+        let header_lines = self.banner_line.is_some() as u16 + self.cwd_line.is_some() as u16;
+        let header_height = if header_lines > 0 { header_lines } else { 1 };
+
         let height = modal_height
-        + 1 
+        + header_height 
         + self.running_tools.len() as u16;
 
         if let Some(ref mut terminal) = self.terminal {  
@@ -389,11 +417,19 @@ impl App<'_> {
             }
 
             terminal.draw(|frame| {                    
-                let [_, inprogress, modal] = Layout::vertical([
-                    Constraint::Length(1), // padding
+                let [header, inprogress, modal] = Layout::vertical([
+                    Constraint::Length(header_height), // header lines
                     Constraint::Length(self.running_tools.len() as u16 + 1), // running tool (if any)
                     Constraint::Length(modal_height)])                // input or modal
                     .areas(frame.area()); 
+
+                // draw header
+                if header_height > 0 {
+                    let mut lines: Vec<Line> = Vec::new();
+                    if let Some(ref b) = self.banner_line { lines.push(Line::from(b.as_str())); }
+                    if let Some(ref c) = self.cwd_line { lines.push(Line::from(c.as_str())); }
+                    frame.render_widget(Text::from(lines), header);
+                }
 
                 // draw running tool
                 if !self.running_tools.is_empty() {
@@ -410,6 +446,9 @@ impl App<'_> {
                     },
                     AppModalState::PermissionModal { widget } => {
                         widget.draw(frame, modal)
+                    },
+                    AppModalState::ModelModal { modal: model } => {
+                        model.draw(frame, modal)
                     }
                 }
             })?;
@@ -417,4 +456,81 @@ impl App<'_> {
         Ok(())
     }
 
+}
+
+// render_banner_line removed; header drawn in draw_ui consistently
+
+impl App<'_> {
+    pub async fn open_model_selector(&mut self) -> io::Result<()> {
+        // Load current config and provider
+        let config = KrokitConfig::load().unwrap_or_else(|_| KrokitConfig::default());
+        let provider_cfg = if let Some(p) = config.get_selected_provider() { p.clone() } else { 
+            self.input.alert_msg("no provider configured", Duration::from_secs(2));
+            return Ok(());
+        };
+
+        // Build client and fetch models
+        let client = match LlmClient::create_provider(&provider_cfg.provider, &provider_cfg.env_vars) {
+            Ok(c) => c,
+            Err(e) => {
+                self.input.alert_msg(&format!("create client failed: {}", e), Duration::from_secs(3));
+                return Ok(());
+            }
+        };
+        let models = match client.models().await {
+            Ok(list) => list.data.into_iter().map(|m| m.id).collect::<Vec<_>>(),
+            Err(e) => {
+                self.input.alert_msg(&format!("fetch models failed: {}", e), Duration::from_secs(3));
+                return Ok(());
+            }
+        };
+
+        // Gather provider infos and pick current provider info
+        let providers = krokit_llm::client::LlmClient::list_providers();
+        let provider_info = providers.iter().find(|p| p.name == provider_cfg.provider)
+            .cloned()
+            .unwrap_or_else(|| providers[0].clone());
+
+        // Build a lightweight config to avoid duplicate warnings inside ModalModel
+        let mm_config = krokit_core::config::config::KrokitConfig {
+            providers: vec![],
+            selected_provider: 0,
+            mcp_configs: HashMap::new(),
+        };
+
+        let modal = ModalModel::new(models, mm_config, providers, provider_info, provider_cfg.env_vars.clone());
+        self.state = AppModalState::ModelModal { modal };
+        Ok(())
+    }
+
+    async fn apply_model_change(&mut self, model: String) -> io::Result<()> {
+        // Persist in config
+        let mut config = KrokitConfig::load().unwrap_or_else(|_| KrokitConfig::default());
+        if let Some(p) = config.get_selected_provider_mut() {
+            p.model = model.clone();
+        } else {
+            self.input.alert_msg("no provider configured", Duration::from_secs(2));
+            return Ok(());
+        }
+        let _ = config.save();
+        config.set_env_vars();
+
+        // Restart agent
+        self.restart_agent().await?;
+
+        self.input.alert_msg(&format!("model switched to {}", model), Duration::from_secs(2));
+        Ok(())
+    }
+
+    async fn restart_agent(&mut self) -> io::Result<()> {
+        if let Some(mut running) = self.agent.take() {
+            let _ = running.controller.test_stop_current_task().await;
+            let _ = running.controller.cancel().await;
+            running.handle.abort();
+        }
+
+        // Start with same agent parameter as at launch
+        let name = self.agent_name.clone();
+        self.start_agent(name.as_deref()).await.map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
+    }
 }

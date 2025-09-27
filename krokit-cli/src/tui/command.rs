@@ -8,6 +8,7 @@ impl App<'_> {
         HashMap::from([
             (("/exit","exit from the tui"), vec![]),
             (("/auth","select a provider"), vec![]),
+            (("/model","change model for current provider"), vec![]),
             (("/tc","set the tool call method: [fc | fc2 | so]"), vec!["method"]),
         ])
         .into_iter()
@@ -23,6 +24,10 @@ impl App<'_> {
         match cmd {
             "/exit" => {
                 self.exit = true;
+            }
+            "/model" => {
+                // Open inline model selector
+                let _ = self.open_model_selector().await;
             }
             "/tc" => {
                 if let Some(ref agent) = self.agent {
