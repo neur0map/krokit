@@ -6,21 +6,21 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use ringbuffer::RingBuffer;
 use crate::fc::history::{CommandEntry, CommandHistory};
-use crate::fc::protocol::{ShaiProtocol, ShaiRequest, ShaiResponse, ResponseData};
+use crate::fc::protocol::{KrokitProtocol, KrokitRequest, KrokitResponse, ResponseData};
 
 /// Socket server for serving command history data
-pub struct ShaiSessionServer {
+pub struct KrokitSessionServer {
     history: Arc<Mutex<CommandHistory>>,
     socket_path: String,
     shutdown: Arc<AtomicBool>,
     pending_command: Arc<Mutex<Option<String>>>,
 }
 
-impl ShaiSessionServer {
+impl KrokitSessionServer {
     pub fn new(session_id: &str, history_size: usize, output_buffer_size: usize) -> Self {
         Self {
             history: Arc::new(Mutex::new(CommandHistory::new(history_size))),
-            socket_path: format!("/tmp/shai_history_{}", session_id),
+            socket_path: format!("/tmp/krokit_history_{}", session_id),
             shutdown: Arc::new(AtomicBool::new(false)),
             pending_command: Arc::new(Mutex::new(None)),
         }
@@ -83,24 +83,24 @@ impl ShaiSessionServer {
         history: Arc<Mutex<CommandHistory>>,
         pending_command: Arc<Mutex<Option<String>>>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let request = ShaiProtocol::read_request(&mut stream)?;
+        let request = KrokitProtocol::read_request(&mut stream)?;
         
         let response = Self::process_request(request, &history, &pending_command);
-        ShaiProtocol::write_response(&mut stream, &response)?;
+        KrokitProtocol::write_response(&mut stream, &response)?;
         
         Ok(())
     }
 
     fn process_request(
-        request: ShaiRequest,
+        request: KrokitRequest,
         history_ref: &Arc<Mutex<CommandHistory>>,
         pending_command_ref: &Arc<Mutex<Option<String>>>,
-    ) -> ShaiResponse {
+    ) -> KrokitResponse {
         match request {
-            ShaiRequest::GetAllCmd => {
+            KrokitRequest::GetAllCmd => {
                 let history = match history_ref.lock() {
                     Ok(h) => h,
-                    Err(_) => return ShaiResponse::Error { message: "Lock error".to_string() },
+                    Err(_) => return KrokitResponse::Error { message: "Lock error".to_string() },
                 };
                 
                 let entries: Vec<CommandEntry> = history
@@ -108,13 +108,13 @@ impl ShaiSessionServer {
                     .cloned()
                     .collect();
                 
-                ShaiResponse::Ok { data: ResponseData::Commands(entries) }
+                KrokitResponse::Ok { data: ResponseData::Commands(entries) }
             }
             
-            ShaiRequest::GetLastCmd { n } => {
+            KrokitRequest::GetLastCmd { n } => {
                 let history = match history_ref.lock() {
                     Ok(h) => h,
-                    Err(_) => return ShaiResponse::Error { message: "Lock error".to_string() },
+                    Err(_) => return KrokitResponse::Error { message: "Lock error".to_string() },
                 };
                 
                 let entries: Vec<CommandEntry> = history
@@ -127,23 +127,23 @@ impl ShaiSessionServer {
                     .cloned()
                     .collect();
                 
-                ShaiResponse::Ok { data: ResponseData::Commands(entries) }
+                KrokitResponse::Ok { data: ResponseData::Commands(entries) }
             }
             
-            ShaiRequest::Clear => {
+            KrokitRequest::Clear => {
                 match history_ref.lock() {
                     Ok(mut history) => {
                         history.clear();
-                        ShaiResponse::Ok { data: ResponseData::Empty }
+                        KrokitResponse::Ok { data: ResponseData::Empty }
                     }
-                    Err(_) => ShaiResponse::Error { message: "Lock error".to_string() },
+                    Err(_) => KrokitResponse::Error { message: "Lock error".to_string() },
                 }
             }
             
-            ShaiRequest::Status => {
+            KrokitRequest::Status => {
                 let history = match history_ref.lock() {
                     Ok(h) => h,
-                    Err(_) => return ShaiResponse::Error { message: "Lock error".to_string() },
+                    Err(_) => return KrokitResponse::Error { message: "Lock error".to_string() },
                 };
                 
                 let all_commands: Vec<&CommandEntry> = history.iter().collect();
@@ -167,27 +167,27 @@ impl ShaiSessionServer {
                     failed_commands: failed,
                     average_duration_ms: avg_duration,
                 };
-                ShaiResponse::Ok { data: ResponseData::Stats(stats) }
+                KrokitResponse::Ok { data: ResponseData::Stats(stats) }
             }
             
-            ShaiRequest::PreCmd { cmd } => {
+            KrokitRequest::PreCmd { cmd } => {
                 // Store the pending command and add it to history
                 match pending_command_ref.lock() {
                     Ok(mut pending) => *pending = Some(cmd.clone()),
-                    Err(_) => return ShaiResponse::Error { message: "Lock error".to_string() },
+                    Err(_) => return KrokitResponse::Error { message: "Lock error".to_string() },
                 }
                 
                 match history_ref.lock() {
                     Ok(mut history) => {
                         let entry = CommandEntry::new(cmd, 1024);
                         history.enqueue(entry);
-                        ShaiResponse::Ok { data: ResponseData::Empty }
+                        KrokitResponse::Ok { data: ResponseData::Empty }
                     }
-                    Err(_) => ShaiResponse::Error { message: "Lock error".to_string() },
+                    Err(_) => KrokitResponse::Error { message: "Lock error".to_string() },
                 }
             }
             
-            ShaiRequest::PostCmd { cmd, exit_code } => {
+            KrokitRequest::PostCmd { cmd, exit_code } => {
                 // Verify the command matches the pending one
                 let pending_matches = match pending_command_ref.lock() {
                     Ok(mut pending) => {
@@ -195,11 +195,11 @@ impl ShaiSessionServer {
                         *pending = None; // Clear pending command
                         matches
                     }
-                    Err(_) => return ShaiResponse::Error { message: "Lock error".to_string() },
+                    Err(_) => return KrokitResponse::Error { message: "Lock error".to_string() },
                 };
                 
                 if !pending_matches {
-                    return ShaiResponse::Error { 
+                    return KrokitResponse::Error { 
                         message: "PostCmd command doesn't match pending PreCmd".to_string() 
                     };
                 }
@@ -210,16 +210,16 @@ impl ShaiSessionServer {
                         if let Some(last_entry) = history.back_mut() {
                             last_entry.set_exit_code(exit_code);
                         }
-                        ShaiResponse::Ok { data: ResponseData::Empty }
+                        KrokitResponse::Ok { data: ResponseData::Empty }
                     }
-                    Err(_) => ShaiResponse::Error { message: "Lock error".to_string() },
+                    Err(_) => KrokitResponse::Error { message: "Lock error".to_string() },
                 }
             }
         }
     }
 }
 
-impl Drop for ShaiSessionServer {
+impl Drop for KrokitSessionServer {
     fn drop(&mut self) {
         self.stop();
     }

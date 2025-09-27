@@ -2,7 +2,7 @@ use crate::runners::coder::env::{get_os_version, get_platform, get_today, get_wo
 
 
 static CLIFIX_GOAL: &str = r#"
-You are SHAI's CLI error recovery assistant. When a user's command fails, you analyze the error and provide a corrected command.
+You are KROKIT's CLI error recovery assistant. When a user's command fails, you analyze the error and provide a corrected command.
 
 ## Your Task
 The user executed a command that failed. Your mission:

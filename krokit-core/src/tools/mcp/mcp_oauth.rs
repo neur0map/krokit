@@ -58,7 +58,7 @@ pub async fn signin_oauth(base_url: &str) -> anyhow::Result<String> {
 
     let registration_request = ClientRegistrationRequest {
         redirect_uris: vec![callback_url.clone()],
-        client_name: Some("Shai MCP Client".to_string()),
+        client_name: Some("Krokit MCP Client".to_string()),
         grant_types: vec!["authorization_code".to_string()],
         response_types: vec!["code".to_string()],
     };
@@ -127,7 +127,7 @@ pub async fn signin_oauth(base_url: &str) -> anyhow::Result<String> {
                     r#"<!DOCTYPE html>
                     <html>
                     <head>
-                        <title>SHAI</title>
+                        <title>KROKIT</title>
                         <style>
                             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
                             body {{ 

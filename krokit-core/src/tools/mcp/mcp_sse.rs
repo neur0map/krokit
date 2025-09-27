@@ -37,7 +37,7 @@ impl McpClient for SseClient {
             protocol_version: Default::default(),
             capabilities: ClientCapabilities::default(),
             client_info: Implementation {
-                name: "shai-mcp-sse-client".to_string(),
+                name: "krokit-mcp-sse-client".to_string(),
                 version: "0.1.0".to_string(),
             },
         };

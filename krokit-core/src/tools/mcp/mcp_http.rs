@@ -64,7 +64,7 @@ impl McpClient for HttpClient {
             protocol_version: Default::default(),
             capabilities: ClientCapabilities::default(),
             client_info: Implementation {
-                name: "shai-mcp-http-client".to_string(),
+                name: "krokit-mcp-http-client".to_string(),
                 version: "0.1.0".to_string(),
             },
         };

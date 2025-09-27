@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write  # Required for creating/deleting releases and uploading assets
+
 jobs:
   build:
     name: Build Unstable for ${{ matrix.os }}

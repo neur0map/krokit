@@ -196,7 +196,7 @@ impl App<'_> {
             if agent_name_ref.is_some() {
                 format!("could not start custom agent '{}': {}", agent_name_ref.unwrap(), e).into()
             } else {
-                format!("could not start shai agent, run shai auth first").into()
+                format!("could not start krokit agent, run krokit auth first").into()
             }
         })?;
         

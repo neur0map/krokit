@@ -124,7 +124,7 @@ impl LoggingConfig {
 
     /// Initialize the global tracing subscriber (safe for multiple calls)
     pub fn init(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Set default level for all modules, then override specific shai modules
+        // Set default level for all modules, then override specific krokit modules
         let filter = EnvFilter::from_default_env()
             .add_directive("warn".parse()?)
             .add_directive(format!("krokit_core={}", self.level).parse()?)

@@ -5,7 +5,7 @@ use std::io::{self, Read, Write};
 use std::sync::atomic::{AtomicI32, Ordering};
 use tempfile::NamedTempFile;
 
-use crate::fc::server::ShaiSessionServer;
+use crate::fc::server::KrokitSessionServer;
 use crate::shell::terminal::TerminalManager;
 use crate::shell::rc::{Shell, ShellType, MAGIC_COOKIE};
 
@@ -126,10 +126,10 @@ impl KrokitPtyManager {
             // PARENT: Handle I/O and run buffer server
             unsafe { libc::close(self.slave_fd) };
             
-            let io_server = ShaiSessionServer::new(&self.session_id, 100, 1000); 
+            let io_server = KrokitSessionServer::new(&self.session_id, 100, 1000); 
             io_server.start()?;
 
-            self.inject_shai_hooks(&shell)?;
+            self.inject_krokit_hooks(&shell)?;
 
             self.handle_io_forwarding(io_server, pid)?;
             
@@ -150,7 +150,7 @@ impl KrokitPtyManager {
         Ok(())
     }
 
-    fn inject_shai_hooks(&mut self, shell: &Shell) -> Result<(), Box<dyn std::error::Error>> {
+    fn inject_krokit_hooks(&mut self, shell: &Shell) -> Result<(), Box<dyn std::error::Error>> {
         // Create temp file with RC content
         let mut temp_file = NamedTempFile::new()?;
         temp_file.write_all(shell.generate_rc_content().as_bytes())?;
@@ -177,7 +177,7 @@ impl KrokitPtyManager {
         };
         
         if bytes_written == -1 {
-            return Err("Failed to inject shai hooks".into());
+            return Err("Failed to inject krokit hooks".into());
         }
         
         let (_file, kept_path) = temp_file.keep()?;
@@ -237,7 +237,7 @@ impl KrokitPtyManager {
         }
     }
 
-    fn handle_io_forwarding(&self, io_server: ShaiSessionServer, child_pid: i32) -> Result<(), Box<dyn std::error::Error>> {
+    fn handle_io_forwarding(&self, io_server: KrokitSessionServer, child_pid: i32) -> Result<(), Box<dyn std::error::Error>> {
         let master_fd_clone = self.master_fd;
         
         // loop to handle user input and send it to shell stdin

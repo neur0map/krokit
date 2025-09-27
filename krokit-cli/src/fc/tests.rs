@@ -44,14 +44,14 @@ mod tests {
 
     #[test]
     fn test_server_creation() {
-        let _ = ShaiSessionServer::new("test_session_1", 100, 1000);
+        let _ = KrokitSessionServer::new("test_session_1", 100, 1000);
         assert!(true);
     }
 
     #[test]
     fn test_pre_post_command_flow() {
         let session_id = "test_session_2";
-        let server = ShaiSessionServer::new(session_id, 100, 1000);
+        let server = KrokitSessionServer::new(session_id, 100, 1000);
         let client = KrokitSessionClient::new(session_id);
         
         server.start().unwrap();
@@ -72,7 +72,7 @@ mod tests {
     #[test]
     fn test_mismatched_post_command() {
         let session_id = "test_session_3";
-        let server = ShaiSessionServer::new(session_id, 100, 1000);
+        let server = KrokitSessionServer::new(session_id, 100, 1000);
         let client = KrokitSessionClient::new(session_id);
         
         server.start().unwrap();
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn test_get_last_commands() {
         let session_id = "test_session_4";
-        let server = ShaiSessionServer::new(session_id, 100, 1000);
+        let server = KrokitSessionServer::new(session_id, 100, 1000);
         let client = KrokitSessionClient::new(session_id);
         
         server.start().unwrap();
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn test_binary_data_efficiency() {
         let session_id = "test_session_5";
-        let server = ShaiSessionServer::new(session_id, 100, 10000);
+        let server = KrokitSessionServer::new(session_id, 100, 10000);
         let client = KrokitSessionClient::new(session_id);
         
         server.start().unwrap();
@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn test_status_response() {
         let session_id = "test_session_6";
-        let server = ShaiSessionServer::new(session_id, 100, 1000);
+        let server = KrokitSessionServer::new(session_id, 100, 1000);
         let client = KrokitSessionClient::new(session_id);
         
         server.start().unwrap();
@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn test_clear_history() {
         let session_id = "test_session_7";
-        let server = ShaiSessionServer::new(session_id, 100, 1000);
+        let server = KrokitSessionServer::new(session_id, 100, 1000);
         let client = KrokitSessionClient::new(session_id);
         
         server.start().unwrap();
@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn test_session_exists() {
         let session_id = "test_session_8";
-        let server = ShaiSessionServer::new(session_id, 100, 1000);
+        let server = KrokitSessionServer::new(session_id, 100, 1000);
         let client = KrokitSessionClient::new(session_id);
         
         // Before starting server

@@ -1,4 +1,4 @@
-// Examples module for shai-llm
+// Examples module for krokit-llm
 // 
 // This module contains practical examples demonstrating various use cases:
 //

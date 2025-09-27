@@ -83,7 +83,7 @@ impl AgentConfig {
                     .ok_or("Could not find home directory")
             })?;
         
-        let agents_dir = config_dir.join("shai").join("agents");
+        let agents_dir = config_dir.join("krokit").join("agents");
         std::fs::create_dir_all(&agents_dir)?;
         Ok(agents_dir)
     }

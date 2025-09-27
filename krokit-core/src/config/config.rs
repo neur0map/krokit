@@ -77,10 +77,10 @@ impl KrokitConfig {
                     .ok_or("Could not find home directory")
             })?;
         
-        let shai_config_dir = config_dir.join("shai");
-        std::fs::create_dir_all(&shai_config_dir)?;
-        
-        Ok(shai_config_dir.join("auth.config"))
+        let krokit_config_dir = config_dir.join("krokit");
+        std::fs::create_dir_all(&krokit_config_dir)?;
+
+        Ok(krokit_config_dir.join("auth.config"))
     }
 
     pub fn load() -> Result<KrokitConfig, Box<dyn std::error::Error>> {

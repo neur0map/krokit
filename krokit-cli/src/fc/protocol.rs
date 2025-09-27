@@ -6,7 +6,7 @@ use rmp_serde::{Serializer, Deserializer};
 use crate::fc::history::{CommandEntry, HistoryStats};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum ShaiRequest {
+pub enum KrokitRequest {
     // send signals
     PreCmd { cmd: String },
     PostCmd { cmd: String, exit_code: i32},
@@ -19,7 +19,7 @@ pub enum ShaiRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum ShaiResponse {
+pub enum KrokitResponse {
     Ok { data: ResponseData },
     Error { message: String },
 }
@@ -32,22 +32,22 @@ pub enum ResponseData {
     Empty,
 }
 
-pub struct ShaiProtocol;
+pub struct KrokitProtocol;
 
-impl ShaiProtocol {
-    pub fn write_request(stream: &mut UnixStream, request: &ShaiRequest) -> Result<(), Box<dyn std::error::Error>> {
+impl KrokitProtocol {
+    pub fn write_request(stream: &mut UnixStream, request: &KrokitRequest) -> Result<(), Box<dyn std::error::Error>> {
         Self::write_message(stream, request)
     }
 
-    pub fn read_request(stream: &mut UnixStream) -> Result<ShaiRequest, Box<dyn std::error::Error>> {
+    pub fn read_request(stream: &mut UnixStream) -> Result<KrokitRequest, Box<dyn std::error::Error>> {
         Self::read_message_request(stream)
     }
 
-    pub fn write_response(stream: &mut UnixStream, response: &ShaiResponse) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn write_response(stream: &mut UnixStream, response: &KrokitResponse) -> Result<(), Box<dyn std::error::Error>> {
         Self::write_message(stream, response)
     }
 
-    pub fn read_response(stream: &mut UnixStream) -> Result<ShaiResponse, Box<dyn std::error::Error>> {
+    pub fn read_response(stream: &mut UnixStream) -> Result<KrokitResponse, Box<dyn std::error::Error>> {
         Self::read_message_response(stream)
     }
 
@@ -65,7 +65,7 @@ impl ShaiProtocol {
     }
 
     // Specific read method for requests
-    fn read_message_request(stream: &mut UnixStream) -> Result<ShaiRequest, Box<dyn std::error::Error>> {
+    fn read_message_request(stream: &mut UnixStream) -> Result<KrokitRequest, Box<dyn std::error::Error>> {
         // Read length prefix
         let mut len_buf = [0u8; 4];
         stream.read_exact(&mut len_buf)?;
@@ -76,13 +76,13 @@ impl ShaiProtocol {
         stream.read_exact(&mut buf)?;
         
         let mut de = Deserializer::new(&buf[..]);
-        let request = ShaiRequest::deserialize(&mut de)?;
+        let request = KrokitRequest::deserialize(&mut de)?;
         
         Ok(request)
     }
 
     // Specific read method for responses
-    fn read_message_response(stream: &mut UnixStream) -> Result<ShaiResponse, Box<dyn std::error::Error>> {
+    fn read_message_response(stream: &mut UnixStream) -> Result<KrokitResponse, Box<dyn std::error::Error>> {
         // Read length prefix
         let mut len_buf = [0u8; 4];
         stream.read_exact(&mut len_buf)?;
@@ -93,7 +93,7 @@ impl ShaiProtocol {
         stream.read_exact(&mut buf)?;
         
         let mut de = Deserializer::new(&buf[..]);
-        let response = ShaiResponse::deserialize(&mut de)?;
+        let response = KrokitResponse::deserialize(&mut de)?;
         
         Ok(response)
     }

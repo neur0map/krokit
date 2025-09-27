@@ -44,7 +44,7 @@ impl AppHeadless {
         // Validate that we have some input
         if initial_trace.is_empty() {
             eprintln!("Error: Please provide a prompt for the coder agent");
-            eprintln!("Usage: shai \"your prompt here\" or using pipe echo \"your prompt here\" | shai");
+            eprintln!("Usage: krokit \"your prompt here\" or using pipe echo \"your prompt here\" | krokit");
             return Ok(());
         }
 
