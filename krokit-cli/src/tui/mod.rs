@@ -7,5 +7,6 @@ pub mod theme;
 pub mod command;
 pub mod helper;
 pub mod cmdnav;
+pub mod filenav;
 
 pub use app::App;

@@ -27,6 +27,8 @@ console = "0.16"
 ringbuffer = "0.16"
 cli-clipboard = "0.4"
 textwrap = "0.16"
+walkdir = "2"
+ignore = "0.4"
 
 
 [target.'cfg(unix)'.dependencies]

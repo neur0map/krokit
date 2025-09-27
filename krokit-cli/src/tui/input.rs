@@ -15,7 +15,7 @@ use krokit_core::agent::{AgentController, AgentEvent, PublicAgentState};
 use krokit_llm::{tool::call_fc_auto::ToolCallFunctionCallingAuto, ToolCallMethod};
 use tui_textarea::{Input, TextArea};
 
-use crate::{tui::{cmdnav::{CommandNav, NavDirection}, helper::HelpArea}};
+use crate::{tui::{cmdnav::{CommandNav, NavDirection}, helper::HelpArea, filenav::FileNav}};
 
 use super::theme::KROKIT_YELLOW;
 
@@ -58,6 +58,7 @@ pub struct InputArea<'a> {
     // bottom helper
     help: Option<HelpArea>,
     cmdnav: CommandNav,
+    filenav: FileNav,
 
     history: Vec<String>,
     history_index: usize,
@@ -81,6 +82,7 @@ impl Default for InputArea<'_> {
             method: ToolCallMethod::FunctionCall,
             help: None,
             cmdnav: CommandNav::new(),
+            filenav: FileNav::new(),
             history: Vec::new(),
             history_index: 0,
         }
@@ -114,6 +116,54 @@ impl InputArea<'_> {
     fn update_command_suggestions(&mut self) {
         // Disable slash-command suggestion popup
         self.cmdnav.hide_suggestions();
+    }
+
+    fn at_prefix(&self) -> Option<(usize, String)> {
+        // Only operate on first line for now
+        let (row, col) = self.input.cursor();
+        if row != 0 { return None; }
+        let line = &self.input.lines()[0];
+        let upto = col.min(line.len());
+        let slice = &line[..upto];
+        if let Some(at_pos) = slice.rfind('@') {
+            // Ensure '@' starts a token (preceded by start or whitespace)
+            if at_pos == 0 || slice[..at_pos].chars().last().map_or(true, |c| c.is_whitespace()) {
+                let prefix = &slice[at_pos+1..];
+                return Some((at_pos, prefix.to_string()));
+            }
+        }
+        None
+    }
+
+    fn update_file_suggestions(&mut self) {
+        if let Some((_start, prefix)) = self.at_prefix() {
+            // Show all files on bare '@', and filter as the user types
+            self.filenav.update_filter(&prefix);
+        } else {
+            self.filenav.hide();
+        }
+    }
+
+    fn commit_selected_file(&mut self) -> bool {
+        if !self.filenav.is_showing() { return false; }
+        let selected = if let Some(sel) = self.filenav.selected_value() { sel.to_string() } else { return false; };
+        let (row, col) = self.input.cursor();
+        if row != 0 { return false; }
+        let mut lines = self.input.lines().to_vec();
+        let line = &lines[0];
+        let upto = col.min(line.len());
+        if let Some(at_pos) = line[..upto].rfind('@') {
+            let new_line = format!("{}@{}{}", &line[..at_pos], selected, &line[col..]);
+            lines[0] = new_line;
+            self.input = TextArea::new(lines);
+
+            // Move cursor to end of inserted path
+            for _ in 0..row { self.input.move_cursor(tui_textarea::CursorMove::Down); }
+            for _ in 0..(at_pos + 1 + selected.len()) { self.input.move_cursor(tui_textarea::CursorMove::Forward); }
+            self.filenav.hide();
+            return true;
+        }
+        false
     }
 
     fn handle_suggestion_keys(&mut self, key_code: KeyCode) -> bool {
@@ -313,9 +363,19 @@ impl InputArea<'_> {
             self.input.input(event);
         }
 
-        // Handle command suggestion navigation first
+        // Handle command suggestion navigation first (disabled for now)
         if self.handle_suggestion_keys(key_event.code) {
             return UserAction::Nope;
+        }
+
+        // Handle file suggestion navigation if visible
+        match key_event.code {
+            KeyCode::Up if self.filenav.is_showing() => { self.filenav.move_up(); return UserAction::Nope; }
+            KeyCode::Down if self.filenav.is_showing() => { self.filenav.move_down(); return UserAction::Nope; }
+            KeyCode::PageUp if self.filenav.is_showing() => { self.filenav.page_up(); return UserAction::Nope; }
+            KeyCode::PageDown if self.filenav.is_showing() => { self.filenav.page_down(); return UserAction::Nope; }
+            KeyCode::Tab if self.filenav.is_showing() => { let _ = self.commit_selected_file(); return UserAction::Nope; }
+            _ => {}
         }
 
         match key_event.code {
@@ -330,6 +390,8 @@ impl InputArea<'_> {
 
                 // Hide command suggestions first
                 self.cmdnav.hide_suggestions();
+                // Hide file suggestions as well
+                self.filenav.hide();
 
                 // Handle escape key for input clearing
                 if let Some(escape_time) = self.escape_press_time {
@@ -355,6 +417,8 @@ impl InputArea<'_> {
                 if let Ok(mut ctx) = ClipboardContext::new() {
                     if let Ok(text) = ctx.get_contents() {
                         self.input.insert_str(text);
+                        // Update file suggestions after paste
+                        self.update_file_suggestions();
                         return UserAction::Nope;
                     }
                 }
@@ -380,6 +444,10 @@ impl InputArea<'_> {
                     return UserAction::Nope;
                 }
                 
+                // If file suggestions are showing, commit the selected suggestion
+                if self.commit_selected_file() {
+                    return UserAction::Nope;
+                }
                 // Regular Enter - set pending and wait
                 self.pending_enter = Some(now);
                 return UserAction::Nope;
@@ -440,6 +508,8 @@ impl InputArea<'_> {
 
                 // Update command suggestions after input changes
                 self.update_command_suggestions();
+                // Update file suggestions after input changes
+                self.update_file_suggestions();
             }
         }
         UserAction::Nope
@@ -450,18 +520,27 @@ impl InputArea<'_> {
 /// drawing logic
 impl InputArea<'_> {
     pub fn height(&self) -> u16 {
-        // +2 for top/bottom borders  
-        // +N for lines inside input
-        // +1 for helper text below input
-        self.input.lines().len().max(1) as u16 + 4 + self.help.as_ref().map_or(0, |h| h.height())
+        let input_lines = self.input.lines().len().max(1) as u16;
+        let input_block = input_lines + 2; // borders
+        let helper_line = 1u16;
+        let files = self.filenav.height();
+        let help = self.help.as_ref().map_or(0, |h| h.height());
+        // include status line at top
+        1 + input_block + helper_line + files + help
     }
 
     pub fn draw(&mut self, f: &mut Frame, area: Rect) {
-        let [status, input_area, helper, help_area] = Layout::vertical([
+        let input_lines = self.input.lines().len().max(1) as u16;
+        let input_block = input_lines + 2; // borders
+        let files_h = self.filenav.height();
+        let help_h = self.help.as_ref().map_or(0, |h| h.height());
+
+        let [status, input_area, helper, files_area, help_area] = Layout::vertical([
             Constraint::Length(1),
-            Constraint::Length(self.height() - 2), 
+            Constraint::Length(input_block), 
             Constraint::Length(1),
-            Constraint::Length(self.help.as_ref().map_or(0, |h| h.height()))
+            Constraint::Length(files_h),
+            Constraint::Length(help_h)
         ]).areas(area);
         
         // status
@@ -514,7 +593,10 @@ impl InputArea<'_> {
             help.draw(f, help_area);
         }
 
-        // Command suggestions popup
+        // File suggestions (plain list, bottom)
+        self.filenav.draw(f, files_area);
+
+        // Command suggestions popup (disabled visually)
         self.cmdnav.render(f, input_area);
     }
 }
