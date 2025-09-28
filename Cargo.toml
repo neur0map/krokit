@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["krokit-macros", "krokit-llm", "krokit-core", "krokit-cli"]
+members = ["krokit-macros", "krokit-llm", "krokit-core", "krokit-cli", "testings-only/rust-calculator"]
 
 [patch.crates-io]
 ratatui = { git = "https://github.com/Marlinski/ratatui", branch = "feature/viewport-resize-v29" }

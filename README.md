@@ -18,22 +18,42 @@ KROKIT is a powerful AI-powered coding assistant designed to help developers wit
 
 ## Installation
 
-### Install latest stable release
+### Stable (prebuilt binary)
 
-Install the latest release with the following command:
+Install the latest stable release:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/neur0map/krokit/main/install.sh | sh
 ```
 
-The `krokit` binary will be installed in `$HOME/.local/bin`
+The `krokit` binary is installed to `$HOME/.local/bin` (ensure it’s on your `PATH`).
 
-### Build from source
+### Unstable (specific tag or pre-release)
+
+Use a specific tag (including pre-releases) by setting `KROKIT_RELEASE` before running the installer:
+
+```bash
+# example: install a pre-release tag
+KROKIT_RELEASE=v0.2.0-rc1 \
+  bash -c "curl -fsSL https://raw.githubusercontent.com/neur0map/krokit/main/install.sh | sh"
+```
+
+You can find available tags (including pre-releases) on the GitHub Releases page.
+
+### Cargo install (from GitHub)
+
+Install the CLI directly from the main branch using Cargo:
+
+```bash
+cargo install --git https://github.com/neur0map/krokit --package krokit --locked
+```
+
+Alternatively, from a local checkout:
 
 ```bash
 git clone https://github.com/neur0map/krokit.git
 cd krokit
-cargo build --release
+cargo install --path krokit-cli --locked
 ```
 
 ## Quick Start
